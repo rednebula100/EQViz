@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>EQViz — Seismic Monitoring</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌍</text></svg>">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/globe.gl/dist/globe.gl.min.js"></script>
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="root">
+
+  <!-- ══ TOPBAR ══════════════════════════════════════════════════════════════ -->
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      EQVIZ <small>SEISMIC OPS · v1.0</small>
+    </div>
+    <div class="topbar-sep"></div>
+    <div class="mode-toggle">
+      <button id="btn-view-2d" class="mode-btn active">2D</button>
+      <button id="btn-view-3d" class="mode-btn">3D</button>
+    </div>
+    <button id="btn-rotate" class="mode-btn" title="자동 회전 on/off">⟳ ROTATE</button>
+    <div class="topbar-sep"></div>
+    <div class="crumbs">
+      <span>REGION</span><span class="on">GLOBAL</span>
+      <span>/</span>
+      <div class="mode-toggle">
+        <button id="btn-mode-hist" class="mode-btn active">HISTORICAL</button>
+        <button id="btn-mode-live" class="mode-btn"><span class="live-dot"></span>LIVE</button>
+      </div>
+      <span>/</span><span id="data-period"></span>
+      <span id="year-badge" class="on year-badge">2024</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="status-pill"><span class="dot"></span> FEED · NOMINAL</div>
+    <div class="status-pill"><span class="dot cyan"></span> <span id="total-count">—</span></div>
+    <button id="btn-mute" class="mute-btn" title="소리 on/off">🔇</button>
+    <div class="clock" id="clock"></div>
+  </div>
+
+  <!-- ══ MAIN 3-COLUMN ═══════════════════════════════════════════════════════ -->
+  <div class="main">
+
+    <!-- ── LEFT PANEL ──────────────────────────────────────────────────────── -->
+    <aside id="left-panel" class="panel">
+      <button class="panel-toggle" data-target="left-panel">◀</button>
+
+      <!-- Stats 2×2 grid -->
+      <div class="sec">
+        <div class="sec-head"><span>SITUATION · CATALOG</span><span class="tag" id="mode-tag">HIST</span></div>
+        <div class="sec-body">
+          <div class="stat-grid">
+            <div class="stat">
+              <div class="lbl">총 지진</div>
+              <div class="val num-mono" id="stat-total">—</div>
+            </div>
+            <div class="stat">
+              <div class="lbl">평균 진도</div>
+              <div class="val num-mono cyan" id="stat-avg-mag">—</div>
+            </div>
+            <div class="stat">
+              <div class="lbl">최대 진도</div>
+              <div class="val num-mono red" id="stat-max-mag">—</div>
+            </div>
+            <div class="stat">
+              <div class="lbl">고위험 구역</div>
+              <div class="val num-mono orange" id="stat-high-risk">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent earthquake list -->
+      <div class="sec" style="flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
+        <div class="sec-head">
+          <span>RECENT · EVENTS</span>
+          <span class="tag" id="recent-count"></span>
+        </div>
+        <ul id="recent-list-items" class="quake-list"></ul>
+      </div>
+
+      <!-- Filters: sliders -->
+      <div class="sec">
+        <div class="sec-head"><span>FILTERS</span></div>
+        <div class="filter-block">
+          <div class="filter-row">
+            <div class="filter-label">
+              <span>MIN MAGNITUDE</span>
+              <span class="v num-mono">≥ <span id="filter-mag-val">4.0</span></span>
+            </div>
+            <div class="slider">
+              <div class="track"></div>
+              <div class="fill" id="mag-fill"></div>
+              <div class="ticks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <input id="filter-mag-min" type="range" min="4" max="8.5" step="0.1" value="4" />
+            </div>
+          </div>
+          <div class="filter-row">
+            <div class="filter-label">
+              <span>MAX DEPTH</span>
+              <span class="v num-mono">≤ <span id="filter-depth-val">700</span> km</span>
+            </div>
+            <div class="slider">
+              <div class="track"></div>
+              <div class="fill" id="depth-fill"></div>
+              <div class="ticks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <input id="filter-depth-max" type="range" min="0" max="700" step="10" value="700" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overlay toggles -->
+      <div class="sec">
+        <div class="sec-head"><span>OVERLAY</span></div>
+        <div class="filter-block" style="padding-top:0;">
+          <button id="btn-plates" class="layer-btn">
+            <span class="dot-mini"></span> PLATES
+            <span class="state">OFF</span>
+          </button>
+          <button id="btn-all-rings" class="layer-btn">
+            <span class="dot-mini"></span> RINGS
+            <span class="state">OFF</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters: risk level checkboxes -->
+      <div class="sec">
+        <div class="sec-head"><span>RISK LEVEL</span></div>
+        <div class="filter-block" style="padding-top:0;">
+          <div id="filter-risk" class="risk-list">
+            <label class="risk-row high">
+              <span class="check"></span>
+              <span class="label">HIGH · RISK SCORE ≥49</span>
+              <input type="checkbox" value="high" checked />
+            </label>
+            <label class="risk-row med">
+              <span class="check"></span>
+              <span class="label">MEDIUM · RISK SCORE 35–48</span>
+              <input type="checkbox" value="medium" checked />
+            </label>
+            <label class="risk-row low">
+              <span class="check"></span>
+              <span class="label">LOW · RISK SCORE &lt;35</span>
+              <input type="checkbox" value="low" checked />
+            </label>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── MAP ─────────────────────────────────────────────────────────────── -->
+    <section class="map-wrap">
+      <div id="map"></div>
+      <div id="globe"></div>
+
+      <!-- Layer toggle buttons — id/class used by ui.js -->
+      <div id="map-controls" class="map-toggles">
+        <button id="btn-heatmap" class="layer-btn">
+          <span class="dot-mini"></span> HEATMAP
+          <span class="state">OFF</span>
+        </button>
+        <button id="btn-markers" class="layer-btn">
+          <span class="dot-mini"></span> RECENT
+          <span class="state">OFF</span>
+        </button>
+        <button id="btn-both" class="layer-btn active">
+          <span class="dot-mini"></span> ALL
+          <span class="state">ON</span>
+        </button>
+      </div>
+
+      <!-- HUD: top-left -->
+      <div class="hud tl">
+        <div class="hud-card">
+          <span class="hud-corner c1"></span><span class="hud-corner c2"></span>
+          <span class="hud-corner c3"></span><span class="hud-corner c4"></span>
+          <div><span class="k">VIEW:</span> <b>GLOBAL · SEISMIC</b></div>
+          <div><span class="k">PROJ:</span> WGS-84 / EPSG:3857</div>
+          <div><span class="k">SRC:</span> USGS · KMA</div>
+        </div>
+      </div>
+
+      <!-- HUD: top-right legend -->
+      <div class="hud tr">
+        <div class="hud-card">
+          <span class="hud-corner c1"></span><span class="hud-corner c2"></span>
+          <span class="hud-corner c3"></span><span class="hud-corner c4"></span>
+          <div style="color:var(--ink);font-family:var(--display);font-size:11px;letter-spacing:0.15em;margin-bottom:6px;">LEGEND · RISK</div>
+          <div class="legend">
+            <div class="row" style="color:var(--red)"><span class="sw"></span> HIGH RISK</div>
+            <div class="row" style="color:var(--orange)"><span class="sw"></span> MEDIUM RISK</div>
+            <div class="row" style="color:var(--green)"><span class="sw"></span> LOW RISK</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HUD: bottom-left -->
+      <div class="hud bl">
+        <div class="hud-card">
+          <span class="hud-corner c1"></span><span class="hud-corner c2"></span>
+          <span class="hud-corner c3"></span><span class="hud-corner c4"></span>
+          <div><span class="k">LAYER:</span> <b id="hud-layer">ALL</b></div>
+          <div><span class="k">DATA:</span> <b>2015–2024</b></div>
+        </div>
+      </div>
+
+      <!-- Compass -->
+      <div class="compass">
+        <span class="n">N</span><span class="s">S</span>
+        <span class="e">E</span><span class="w">W</span>
+      </div>
+    </section>
+
+    <!-- ── RIGHT PANEL ─────────────────────────────────────────────────────── -->
+    <aside id="right-panel" class="panel panel-r">
+      <button class="panel-toggle" data-target="right-panel">▶</button>
+
+      <!-- Yearly frequency chart -->
+      <div class="sec" id="chart-yearly">
+        <div class="sec-head">
+          <span>FREQUENCY · YEARLY</span>
+          <span class="num-mono" style="color:var(--ink-dim);font-size:9px;">2015–2024</span>
+        </div>
+        <div class="chart-card">
+          <canvas id="canvas-yearly"></canvas>
+        </div>
+      </div>
+
+      <!-- Magnitude distribution chart -->
+      <div class="sec" id="chart-magnitude">
+        <div class="sec-head">
+          <span>MAG · DISTRIBUTION</span>
+        </div>
+        <div class="chart-card">
+          <canvas id="canvas-magnitude"></canvas>
+        </div>
+      </div>
+
+      <!-- Zone detail — hidden until marker click -->
+      <div id="detail-panel" class="sec" style="flex:1 1 auto;overflow-y:auto;" hidden>
+        <div class="sec-head"><span>ZONE DETAIL</span><span class="tag">SELECTED</span></div>
+        <div class="zone">
+          <dl id="detail-content" class="z-table"></dl>
+        </div>
+      </div>
+    </aside>
+
+  </div><!-- .main -->
+
+  <!-- ══ PLAYBACK BAR ════════════════════════════════════════════════════════ -->
+  <div id="playback-bar" class="playback-bar">
+    <!-- Year navigation -->
+    <div class="pb-year-nav">
+      <button id="pb-year-prev" class="pb-btn pb-year-btn" title="이전 연도">◀</button>
+      <span id="pb-year" class="pb-year">2024</span>
+      <button id="pb-year-next" class="pb-btn pb-year-btn" title="다음 연도">▶</button>
+    </div>
+    <div class="pb-sep"></div>
+    <!-- Month navigation -->
+    <div class="pb-year-nav">
+      <button id="pb-month-prev" class="pb-btn pb-year-btn" title="이전 월">◀</button>
+      <span id="pb-month-label" class="pb-month">JAN</span>
+      <button id="pb-month-next" class="pb-btn pb-year-btn" title="다음 월">▶</button>
+    </div>
+    <div class="pb-sep"></div>
+    <!-- 30분 단위 슬롯 재생 -->
+    <button id="pb-first" class="pb-btn" title="처음으로">|◀</button>
+    <button id="pb-play"  class="pb-btn pb-play" title="재생">▶</button>
+    <button id="pb-last"  class="pb-btn" title="끝으로">▶|</button>
+    <div class="pb-timeline">
+      <input id="pb-slider" type="range" min="0" max="8927" value="0" step="1" />
+    </div>
+    <div id="pb-datetime" class="pb-datetime">JAN 01 · 00:00</div>
+    <div class="pb-speeds">
+      <button class="pb-speed" data-speed="0.5">0.5×</button>
+      <button class="pb-speed active" data-speed="1">1×</button>
+      <button class="pb-speed" data-speed="2">2×</button>
+      <button class="pb-speed" data-speed="4">4×</button>
+      <button class="pb-speed" data-speed="8">8×</button>
+      <button class="pb-speed" data-speed="16">16×</button>
+    </div>
+  </div>
+
+  <!-- ══ FOOTER ══════════════════════════════════════════════════════════════ -->
+  <div class="footer">
+    <span class="seg">PROJECT <b>EQVIZ</b></span>
+    <span class="seg">STACK <b>LEAFLET · CHART.JS · USGS</b></span>
+    <div class="sp"></div>
+    <span class="seg" style="color:var(--cyan)">✦ SECURE</span>
+  </div>
+
+</div><!-- #root -->
+
+<script type="module" src="js/main.js"></script>
+
+<!-- Clock (visual only, no data logic) -->
+<script>
+(function () {
+  function tick() {
+    var el = document.getElementById('clock');
+    if (el) el.textContent = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+
+<!-- Slider fill visual (no data logic, complements ui.js) -->
+<script>
+(function () {
+  function updateFill(input) {
+    var pct = (input.value - input.min) / (input.max - input.min) * 100;
+    var fill = input.parentElement && input.parentElement.querySelector('.fill');
+    if (fill) fill.style.width = pct + '%';
+  }
+  document.addEventListener('input', function (e) {
+    if (e.target.type === 'range') updateFill(e.target);
+  });
+  window.addEventListener('load', function () {
+    document.querySelectorAll('.slider input[type=range]').forEach(updateFill);
+  });
+
+  // Sync HUD layer label with active button
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('#map-controls .layer-btn');
+    if (!btn) return;
+    var hudLayer = document.getElementById('hud-layer');
+    if (hudLayer) hudLayer.textContent = btn.textContent.trim().replace(/\s+ON$|\s+OFF$/, '').trim();
+    // sync state badges
+    document.querySelectorAll('#map-controls .layer-btn').forEach(function (b) {
+      var s = b.querySelector('.state');
+      if (s) s.textContent = b.classList.contains('active') ? 'ON' : 'OFF';
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
