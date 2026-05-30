@@ -23,7 +23,7 @@ import {
 } from './map.js';
 import { loadMonth, loadLive } from './data.js';
 import { renderMagnitudeChart } from './chart.js';
-import { playEarthquakeSound } from './audio.js';
+import { playEarthquakeSound, setVolume, setMinMag, setTheme } from './audio.js';
 import { initGlobe, renderGlobeHeatmap, clearGlobeHeatmap, setGlobeAutoRotate, renderGlobeBars, clearGlobeBars } from './globe.js';
 
 const MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
@@ -54,6 +54,7 @@ let _globeInited   = false;
 let _autoRotate    = false;
 let _showAllRings  = false;
 let _prevRingsKey  = '';
+const _settings = { liveInterval: 60, maxMarkers: 300, volume: 0.8, minSoundMag: 4, soundTheme: 'SEISMIC', autoPlay: false };
 
 function initUI({ riskData, recentData, stats }) {
   _riskData  = riskData;
@@ -73,6 +74,7 @@ function initUI({ riskData, recentData, stats }) {
   _initPlayback();
   _initPlatesButton();
   _initAllRingsButton();
+  _initSettings();
 
   _setSlot(0);
 }
@@ -269,7 +271,7 @@ function _setMode(mode) {
   if (!_globeInited || _viewMode !== '3d') return;
   if (mode !== 'markers') renderGlobeHeatmap(_riskData); else clearGlobeHeatmap();
   if (mode !== 'heatmap') {
-    const mapData = [..._recentData].sort((a, b) => (b.magnitude || 0) - (a.magnitude || 0)).slice(0, 300);
+    const mapData = _applyMaxMarkers(_recentData);
     renderGlobeBars(mapData);
   } else {
     clearGlobeBars();
@@ -342,7 +344,7 @@ function _startLive() {
 
   _prevLiveIds = new Set(_recentData.map(eq => eq.id).filter(Boolean));
   _refreshLive();
-  _liveTimer = setInterval(_refreshLive, 60_000);
+  _liveTimer = setInterval(_refreshLive, _settings.liveInterval * 1000);
 }
 
 function _stopLive() {
@@ -515,12 +517,29 @@ function _stopPlay(resetBtn = true) {
 function _scheduleNext() {
   if (!_playing) return;
   _setSlot(_slot, true); // 증분 업데이트 — 기존 마커 유지
-  if (_slot >= _maxSlot) { _stopPlay(); return; }
+  if (_slot >= _maxSlot) {
+    _stopPlay();
+    if (_settings.autoPlay) _autoAdvanceMonth();
+    return;
+  }
   const step = Math.max(1, Math.round(BASE_STEP * _playSpeed));
   _playTimer = setTimeout(() => {
     _slot = Math.min(_slot + step, _maxSlot);
     _scheduleNext();
   }, PLAY_INTERVAL);
+}
+
+async function _autoAdvanceMonth() {
+  if (_monthNum < 12) {
+    await _setMonth(_monthNum + 1);
+  } else if (_year < 2024) {
+    _year++;
+    _updateYearDisplay(_year);
+    await _setMonth(1);
+  } else {
+    return; // 데이터 끝 (2024-12)
+  }
+  _startPlay();
 }
 
 // 5분 슬롯 기준 ±60h 롤링 윈도우 필터링 후 렌더링
@@ -536,9 +555,7 @@ function _setSlot(slot, incremental = false) {
   );
   _recentData = windowData;
 
-  const mapData = [...windowData]
-    .sort((a, b) => (b.magnitude || 0) - (a.magnitude || 0))
-    .slice(0, 300);
+  const mapData = _applyMaxMarkers(windowData);
 
   // 신규 진입 마커 감지
   const newArrivals = (incremental && _prevWindowIds.size > 0)
@@ -673,6 +690,72 @@ function _initPlatesButton() {
     btn.classList.toggle('active', on);
     btn.querySelector('.state').textContent = on ? 'ON' : 'OFF';
     togglePlates(on);
+  });
+}
+
+function _applyMaxMarkers(data) {
+  const sorted = [...data].sort((a, b) => (b.magnitude || 0) - (a.magnitude || 0));
+  return _settings.maxMarkers ? sorted.slice(0, _settings.maxMarkers) : sorted;
+}
+
+function _initSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  if (!overlay) return;
+
+  document.getElementById('btn-settings')?.addEventListener('click', () => {
+    overlay.classList.remove('hidden');
+  });
+  document.getElementById('settings-close')?.addEventListener('click', () => {
+    overlay.classList.add('hidden');
+  });
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.add('hidden');
+  });
+
+  overlay.querySelectorAll('input[name="liveInterval"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      _settings.liveInterval = parseInt(radio.value, 10);
+      if (_appMode === 'live') {
+        clearInterval(_liveTimer);
+        _liveTimer = setInterval(_refreshLive, _settings.liveInterval * 1000);
+      }
+    });
+  });
+
+  overlay.querySelectorAll('input[name="maxMarkers"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      _settings.maxMarkers = radio.value === '0' ? null : parseInt(radio.value, 10);
+      if (_appMode === 'historical') _setSlot(_slot, false);
+    });
+  });
+
+  const volSlider = document.getElementById('setting-volume');
+  const volVal    = document.getElementById('vol-val');
+  volSlider?.addEventListener('input', () => {
+    const v = parseInt(volSlider.value, 10);
+    _settings.volume = v / 100;
+    setVolume(_settings.volume);
+    if (volVal) volVal.textContent = v;
+  });
+
+  overlay.querySelectorAll('input[name="minSoundMag"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      _settings.minSoundMag = parseFloat(radio.value);
+      setMinMag(_settings.minSoundMag);
+    });
+  });
+
+  overlay.querySelectorAll('input[name="soundTheme"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      _settings.soundTheme = radio.value;
+      setTheme(radio.value);
+    });
+  });
+
+  overlay.querySelectorAll('input[name="autoPlay"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      _settings.autoPlay = radio.value === 'true';
+    });
   });
 }
 

@@ -49,6 +49,7 @@
     <div class="topbar-spacer"></div>
     <div class="status-pill"><span class="dot"></span> FEED · NOMINAL</div>
     <div class="status-pill"><span class="dot cyan"></span> <span id="total-count">—</span></div>
+    <button id="btn-settings" class="mute-btn" title="설정">⚙</button>
     <button id="btn-mute" class="mute-btn" title="소리 on/off">🔇</button>
     <div class="clock" id="clock"></div>
   </div>
@@ -305,6 +306,77 @@
     <div class="sp"></div>
     <span class="seg" style="color:var(--cyan)">✦ SECURE</span>
   </div>
+
+<!-- ══ SETTINGS MODAL ════════════════════════════════════════════════════════ -->
+<div id="settings-overlay" class="settings-overlay hidden">
+  <div class="settings-modal">
+    <div class="settings-head">
+      <span>SETTINGS</span>
+      <button id="settings-close">✕</button>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-sec-head">DATA</div>
+
+      <div class="settings-row">
+        <span class="settings-label">LIVE 갱신 주기</span>
+        <div class="s-opts">
+          <label class="s-opt"><input type="radio" name="liveInterval" value="15"> 15s</label>
+          <label class="s-opt"><input type="radio" name="liveInterval" value="30"> 30s</label>
+          <label class="s-opt"><input type="radio" name="liveInterval" value="60" checked> 60s</label>
+          <label class="s-opt"><input type="radio" name="liveInterval" value="120"> 120s</label>
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <span class="settings-label">최대 표시 마커</span>
+        <div class="s-opts">
+          <label class="s-opt"><input type="radio" name="maxMarkers" value="300" checked> 300</label>
+          <label class="s-opt"><input type="radio" name="maxMarkers" value="500"> 500</label>
+          <label class="s-opt"><input type="radio" name="maxMarkers" value="1000"> 1000</label>
+          <label class="s-opt"><input type="radio" name="maxMarkers" value="0"> 무제한</label>
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <span class="settings-label">자동 다음 재생</span>
+        <div class="s-opts">
+          <label class="s-opt"><input type="radio" name="autoPlay" value="false" checked> OFF</label>
+          <label class="s-opt"><input type="radio" name="autoPlay" value="true"> ON</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-sec-head">SOUND</div>
+
+      <div class="settings-row">
+        <span class="settings-label">테마</span>
+        <div class="s-opts">
+          <label class="s-opt"><input type="radio" name="soundTheme" value="SEISMIC" checked> SEISMIC</label>
+          <label class="s-opt"><input type="radio" name="soundTheme" value="RADAR"> RADAR</label>
+          <label class="s-opt"><input type="radio" name="soundTheme" value="SONAR"> SONAR</label>
+          <label class="s-opt"><input type="radio" name="soundTheme" value="RETRO"> RETRO</label>
+          <label class="s-opt"><input type="radio" name="soundTheme" value="ZEN"> ZEN</label>
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <span class="settings-label">볼륨 <span id="vol-val" class="num-mono">80</span>%</span>
+        <input type="range" id="setting-volume" class="s-range" min="0" max="100" value="80">
+      </div>
+
+      <div class="settings-row">
+        <span class="settings-label">최소 재생 진도</span>
+        <div class="s-opts">
+          <label class="s-opt"><input type="radio" name="minSoundMag" value="4" checked> M4+</label>
+          <label class="s-opt"><input type="radio" name="minSoundMag" value="5"> M5+</label>
+          <label class="s-opt"><input type="radio" name="minSoundMag" value="6"> M6+</label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 </div><!-- #root -->
 

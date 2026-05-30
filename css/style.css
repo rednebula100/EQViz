@@ -358,6 +358,71 @@ body::before {
 
 #btn-plates { border-right: none; width: 100%; }
 
+/* ── Settings Modal ──────────────────────────────────────────────────────── */
+.settings-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.settings-overlay.hidden { display: none; }
+
+.settings-modal {
+  background: var(--bg-2);
+  border: 1px solid var(--line-bright);
+  width: 380px;
+  font-family: var(--mono);
+}
+
+.settings-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--display); font-size: 11px; letter-spacing: 0.15em;
+  color: var(--cyan);
+}
+.settings-head button {
+  background: none; border: none; color: var(--ink-dim);
+  cursor: pointer; font-size: 14px; line-height: 1; padding: 0;
+}
+.settings-head button:hover { color: var(--ink); }
+
+.settings-section { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.settings-section:last-child { border-bottom: none; }
+
+.settings-sec-head {
+  font-size: 9px; letter-spacing: 0.18em; color: var(--ink-dim); margin-bottom: 10px;
+}
+
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 8px;
+}
+.settings-row:last-child { margin-bottom: 0; }
+
+.settings-label {
+  font-size: 11px; color: var(--ink-mid); white-space: nowrap; flex-shrink: 0;
+}
+
+.s-opts { display: flex; gap: 5px; flex-wrap: wrap; }
+
+.s-opt {
+  display: flex; align-items: center;
+  font-size: 11px; color: var(--ink-mid); cursor: pointer;
+  padding: 3px 8px; border: 1px solid var(--line-bright);
+  transition: color 0.1s, border-color 0.1s, background 0.1s;
+  user-select: none;
+}
+.s-opt:has(input:checked) {
+  color: var(--cyan); border-color: rgba(0,229,255,0.45);
+  background: rgba(0,229,255,0.06);
+}
+.s-opt input[type="radio"] { display: none; }
+
+.s-range {
+  flex: 1; height: 2px; accent-color: var(--cyan); cursor: pointer;
+}
+
 .tsunami-badge {
   display: block;
   grid-column: 2;
