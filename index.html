@@ -49,7 +49,7 @@
     <div class="topbar-spacer"></div>
     <div class="status-pill"><span class="dot"></span> FEED · NOMINAL</div>
     <div class="status-pill"><span class="dot cyan"></span> <span id="total-count">—</span></div>
-    <button id="btn-settings" class="mute-btn" title="설정">⚙</button>
+    <button id="btn-settings" class="mute-btn" title="설정">⚙️ SET</button>
     <button id="btn-mute" class="mute-btn" title="소리 on/off">🔇</button>
     <div class="clock" id="clock"></div>
   </div>
@@ -375,6 +375,34 @@
         </div>
       </div>
     </div>
+
+    <div class="settings-section">
+      <div class="settings-sec-head">VISUALS</div>
+
+      <div class="settings-row">
+        <span class="settings-label">화면 진동 <span style="color:var(--ink-dim);font-size:9px;">M5.5+</span></span>
+        <div class="s-opts">
+          <label class="s-opt"><input type="radio" name="shake" value="true" checked> ON</label>
+          <label class="s-opt"><input type="radio" name="shake" value="false"> OFF</label>
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <span class="settings-label">지진계 파형</span>
+        <div class="s-opts">
+          <label class="s-opt"><input type="radio" name="seismograph" value="true" checked> ON</label>
+          <label class="s-opt"><input type="radio" name="seismograph" value="false"> OFF</label>
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <span class="settings-label">이동 궤적</span>
+        <div class="s-opts">
+          <label class="s-opt"><input type="radio" name="trail" value="true" checked> ON</label>
+          <label class="s-opt"><input type="radio" name="trail" value="false"> OFF</label>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -387,7 +415,7 @@
 (function () {
   function tick() {
     var el = document.getElementById('clock');
-    if (el) el.textContent = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+    if (el) el.textContent = new Date().toISOString().slice(11, 19) + ' UTC';
   }
   tick();
   setInterval(tick, 1000);

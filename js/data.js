@@ -55,6 +55,9 @@ async function loadMonth(year, month) {
     eq.minuteOffset = Math.floor((eq.epochMs - monthStart) / 60000);
   });
 
+  if (features.length >= 5000) {
+    console.warn(`[data] ${key} 결과가 5000건 한도에 도달 — 일부 데이터 누락 가능`);
+  }
   _monthCache.set(key, data);
   return data;
 }

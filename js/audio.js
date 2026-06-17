@@ -24,6 +24,18 @@ function initAudio() {
   if (!btn) return;
   btn.textContent = '🔊';
   btn.classList.add('unmuted');
+
+  // 첫 사용자 제스처(클릭/키)에서 AudioContext를 미리 생성·재개
+  // — setTimeout 내부에서 resume()을 호출하면 Safari 등 엄격한 브라우저에서 실패할 수 있음
+  const _onFirstGesture = () => {
+    _ensureCtx();
+    if (_ctx && _ctx.state === 'suspended') _ctx.resume();
+    document.removeEventListener('click',   _onFirstGesture, true);
+    document.removeEventListener('keydown', _onFirstGesture, true);
+  };
+  document.addEventListener('click',   _onFirstGesture, true);
+  document.addEventListener('keydown', _onFirstGesture, true);
+
   btn.addEventListener('click', () => {
     _ensureCtx();
     _muted = !_muted;

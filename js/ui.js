@@ -20,11 +20,18 @@ import {
   clearAllMMIRings,
   togglePlates,
   isTsunamiRisk,
+  addTrailPoint,
+  clearTrail,
+  setTrailEnabled,
+  setTrailVisible,
+  triggerShake,
+  setShakeEnabled,
 } from './map.js';
 import { loadMonth, loadLive } from './data.js';
 import { renderMagnitudeChart } from './chart.js';
 import { playEarthquakeSound, setVolume, setMinMag, setTheme } from './audio.js';
 import { initGlobe, renderGlobeHeatmap, clearGlobeHeatmap, setGlobeAutoRotate, renderGlobeBars, clearGlobeBars } from './globe.js';
+import { initSeismograph, addSeismographEvent, setSeismographEnabled } from './seismograph.js';
 
 const MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 const SLOT_MIN      = 5;    // 슬롯 1개 = 5분
@@ -54,7 +61,7 @@ let _globeInited   = false;
 let _autoRotate    = false;
 let _showAllRings  = false;
 let _prevRingsKey  = '';
-const _settings = { liveInterval: 60, maxMarkers: 300, volume: 0.8, minSoundMag: 4, soundTheme: 'SEISMIC', autoPlay: false };
+const _settings = { liveInterval: 60, maxMarkers: 300, volume: 0.8, minSoundMag: 4, soundTheme: 'SEISMIC', autoPlay: false, shake: true, seismograph: true, trail: true };
 
 function initUI({ riskData, recentData, stats }) {
   _riskData  = riskData;
@@ -75,6 +82,7 @@ function initUI({ riskData, recentData, stats }) {
   _initPlatesButton();
   _initAllRingsButton();
   _initSettings();
+  initSeismograph();
 
   _setSlot(0);
 }
@@ -93,16 +101,19 @@ function updateStatsSummary(stats) {
   _setText('stat-high-risk', `${stats.high_risk_zones} ZONES`);
 }
 
+const LIST_CAP = 100; // 진도 순 상위 N개만 DOM 렌더 (뱃지 카운트는 전체 유지)
+
 function renderRecentList(data) {
   const container = document.getElementById('recent-list-items');
   const countEl   = document.getElementById('recent-count');
   if (!container) return;
 
-  const sorted = [...data].sort((a, b) => (b.magnitude || 0) - (a.magnitude || 0));
+  const sorted  = [...data].sort((a, b) => (b.magnitude || 0) - (a.magnitude || 0));
+  const display = sorted.length > LIST_CAP ? sorted.slice(0, LIST_CAP) : sorted;
   if (countEl) countEl.textContent = `(${sorted.length})`;
 
   container.innerHTML = '';
-  sorted.forEach(eq => {
+  display.forEach(eq => {
     const li = document.createElement('li');
     li.className = 'recent-item';
     const tsunamiBadge = isTsunamiRisk(eq)
@@ -335,6 +346,7 @@ function _initModeToggle() {
 function _startLive() {
   _appMode = 'live';
   _stopPlay();
+  clearTrail();
   document.getElementById('btn-mode-hist')?.classList.remove('active');
   document.getElementById('btn-mode-live')?.classList.add('active', 'live-active');
   document.getElementById('year-badge')?.classList.add('hidden');
@@ -373,6 +385,11 @@ async function _refreshLive() {
     if (newEvents.length) {
       const maxMag = Math.max(...newEvents.map(eq => eq.magnitude || 0));
       playEarthquakeSound(maxMag);
+      if (_settings.shake)       triggerShake(maxMag);
+      if (_settings.seismograph) addSeismographEvent(maxMag);
+      if (_settings.trail) {
+        newEvents.forEach(eq => addTrailPoint(eq.latitude, eq.longitude));
+      }
     }
     // LIVE: M5.5+ 상시 ripple 표시
     renderRippleLayer(data.filter(eq => (eq.magnitude || 0) >= 5.5), 'live', false);
@@ -409,6 +426,8 @@ function _switchView(mode) {
 
   document.getElementById('map').style.display   = is3d ? 'none' : '';
   document.getElementById('globe').style.display = is3d ? 'block' : 'none';
+  // 3D 모드에서는 Leaflet 좌표 변환 불가 → trail 캔버스 숨김
+  setTrailVisible(!is3d);
   document.getElementById('btn-view-2d')?.classList.toggle('active', !is3d);
   document.getElementById('btn-view-3d')?.classList.toggle('active', is3d);
   document.getElementById('btn-rotate').style.display = is3d ? '' : 'none';
@@ -495,7 +514,7 @@ function _initPlayback() {
 
 function _startPlay() {
   const wasAtEnd = _slot >= _maxSlot;
-  if (wasAtEnd) _slot = 0;
+  if (wasAtEnd) { _slot = 0; clearTrail(); }
   _playing = true;
   document.getElementById('pb-play').textContent = '⏸';
   document.getElementById('pb-play').classList.add('playing');
@@ -530,16 +549,20 @@ function _scheduleNext() {
 }
 
 async function _autoAdvanceMonth() {
-  if (_monthNum < 12) {
-    await _setMonth(_monthNum + 1);
-  } else if (_year < 2024) {
-    _year++;
-    _updateYearDisplay(_year);
-    await _setMonth(1);
-  } else {
-    return; // 데이터 끝 (2024-12)
+  try {
+    if (_monthNum < 12) {
+      await _setMonth(_monthNum + 1);
+    } else if (_year < 2024) {
+      _year++;
+      _updateYearDisplay(_year);
+      await _setMonth(1);
+    } else {
+      return; // 데이터 끝 (2024-12)
+    }
+    if (_settings.autoPlay) _startPlay();
+  } catch (err) {
+    console.error('[autoPlay] 월 데이터 로드 실패:', err);
   }
-  _startPlay();
 }
 
 // 5분 슬롯 기준 ±60h 롤링 윈도우 필터링 후 렌더링
@@ -565,8 +588,12 @@ function _setSlot(slot, incremental = false) {
   if (newArrivals.length > 0) {
     const maxMag = Math.max(...newArrivals.map(eq => eq.magnitude || 0));
     playEarthquakeSound(maxMag);
+    if (_settings.shake)       triggerShake(maxMag);
+    if (_settings.seismograph) addSeismographEvent(maxMag);
+    if (_settings.trail) {
+      newArrivals.forEach(eq => addTrailPoint(eq.latitude, eq.longitude));
+    }
   }
-  if (!incremental) _prevWindowIds = new Set();
   _prevWindowIds = new Set(windowData.map(eq => eq.id).filter(Boolean));
 
   renderMarkers(mapData, showDetail, { animate: true, incremental });
@@ -604,6 +631,7 @@ async function _setMonth(monthNum) {
   if (_playing) _stopPlay();
   _monthNum = monthNum;
   _maxSlot  = _calcMaxSlot(_year, monthNum);
+  clearTrail();
 
   const slider = document.getElementById('pb-slider');
   if (slider) slider.max = _maxSlot;
@@ -755,6 +783,27 @@ function _initSettings() {
   overlay.querySelectorAll('input[name="autoPlay"]').forEach(radio => {
     radio.addEventListener('change', () => {
       _settings.autoPlay = radio.value === 'true';
+    });
+  });
+
+  overlay.querySelectorAll('input[name="shake"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      _settings.shake = radio.value === 'true';
+      setShakeEnabled(_settings.shake);
+    });
+  });
+
+  overlay.querySelectorAll('input[name="seismograph"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      _settings.seismograph = radio.value === 'true';
+      setSeismographEnabled(_settings.seismograph);
+    });
+  });
+
+  overlay.querySelectorAll('input[name="trail"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      _settings.trail = radio.value === 'true';
+      setTrailEnabled(_settings.trail);
     });
   });
 }

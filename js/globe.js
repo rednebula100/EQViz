@@ -41,13 +41,6 @@ function initGlobe(containerId) {
   }).observe(el);
 }
 
-function renderGlobeMarkers(data, onClickFn) {
-  if (!_g) return;
-  _g
-    .pointsData(data)
-    .onPointClick(eq => onClickFn?.(eq));
-}
-
 function renderGlobeHeatmap(riskData) {
   if (!_g) return;
   const maxCount = riskData.reduce((m, d) => Math.max(m, d.count || 0), 1);
@@ -140,4 +133,4 @@ function clearGlobeBars() {
   _g.pointsData([]);
 }
 
-export { initGlobe, renderGlobeMarkers, renderGlobeHeatmap, clearGlobeHeatmap, setGlobeAutoRotate, renderGlobeBars, clearGlobeBars };
+export { initGlobe, renderGlobeHeatmap, clearGlobeHeatmap, setGlobeAutoRotate, renderGlobeBars, clearGlobeBars };

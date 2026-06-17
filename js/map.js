@@ -21,6 +21,13 @@ let rippleLayer = null;
 let _mmiLayer      = null;
 let _allRingsLayer = null;
 let _platesLayer   = null;
+let _ringsRenderer = null; // 공유 Canvas 렌더러 — showAllMMIRings SVG DOM 대체
+let _zoomRafId     = null;
+let _trailCanvas   = null; // 궤적 canvas 오버레이
+let _trailCtx      = null;
+let _trailPoints   = [];   // L.LatLng[] 시간 순
+let _trailEnabled  = true;
+let _shakeEnabled  = true;
 let _markerMap = new Map();  // id → marker (증분 업데이트용)
 let _rippleMap = new Map();  // id → marker (ripple 증분 업데이트용)
 
@@ -51,11 +58,17 @@ function initMap(containerId) {
   });
 
   map.on('zoomend', () => {
-    const scale = Math.max(0.3, map.getZoom() / 5);
-    for (const m of _markerMap.values()) {
-      m.setRadius(magRadius(m._mag) * scale);
-    }
+    if (_zoomRafId) cancelAnimationFrame(_zoomRafId);
+    _zoomRafId = requestAnimationFrame(() => {
+      _zoomRafId = null;
+      const scale = Math.max(0.3, map.getZoom() / 5);
+      for (const m of _markerMap.values()) {
+        m.setRadius(magRadius(m._mag) * scale);
+      }
+      _redrawTrail();
+    });
   });
+  map.on('moveend', _redrawTrail);
 
   L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
@@ -64,6 +77,16 @@ function initMap(containerId) {
       maxZoom: 16,
     }
   ).addTo(map);
+
+  // 궤적 canvas — .map-wrap(map의 부모 섹션)에 절대 위치로 삽입
+  const mapEl = document.getElementById(containerId);
+  const wrap  = mapEl?.parentElement;
+  if (wrap) {
+    _trailCanvas = document.createElement('canvas');
+    _trailCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:450;';
+    wrap.appendChild(_trailCanvas);
+    _trailCtx = _trailCanvas.getContext('2d');
+  }
 }
 
 /**
@@ -275,21 +298,35 @@ function showAllMMIRings(data) {
   if (_allRingsLayer) { _allRingsLayer.remove(); _allRingsLayer = null; }
   const items = data.filter(eq => eq.latitude != null && eq.magnitude != null);
   if (!items.length) return;
+
+  // Canvas 렌더러: SVG DOM 노드(N×3개) 대신 단일 canvas draw → 대량 데이터 freeze 방지
+  if (!_ringsRenderer) _ringsRenderer = L.canvas();
+
+  // 마커 수가 많으면 tooltip + 마우스 이벤트 비활성화
+  // (canvas 모드에서 N×3 mousemove hit-test는 SVG보다 더 비쌈)
+  const withInteraction = items.length <= 30;
   const ttOpts = { sticky: true, className: 'mmi-tooltip' };
+
   _allRingsLayer = L.layerGroup();
   items.forEach(({ latitude: lat, longitude: lng, magnitude: mag }) => {
     const outerKm = Math.pow(10, (mag - 1.5) / 2);
     const midKm   = Math.pow(10, (mag - 2.5) / 2);
     const innerKm = Math.pow(10, (mag - 3.5) / 2);
-    _allRingsLayer.addLayer(
-      L.circle([lat, lng], { radius: outerKm * 1000, color: '#ffcc00', weight: 1, fill: false, dashArray: '4 4', opacity: 0.3 })
-        .bindTooltip(`약한 진동 반경 ${Math.round(outerKm)}km — 진동 감지 수준`, ttOpts));
-    _allRingsLayer.addLayer(
-      L.circle([lat, lng], { radius: midKm * 1000,   color: '#ff6600', weight: 1, fill: false, dashArray: '4 4', opacity: 0.35 })
-        .bindTooltip(`중간 피해 반경 ${Math.round(midKm)}km — 유리창 파손 수준`, ttOpts));
-    _allRingsLayer.addLayer(
-      L.circle([lat, lng], { radius: innerKm * 1000, color: '#ff1a1a', weight: 1, fill: false, opacity: 0.4 })
-        .bindTooltip(`심각한 피해 예상 반경 ${Math.round(innerKm)}km — 건물 붕괴 가능`, ttOpts));
+
+    const mkRing = (km, color, opacity, dash, tip) => {
+      const opts = {
+        radius: km * 1000, color, weight: 1, fill: false, opacity,
+        renderer: _ringsRenderer, interactive: withInteraction,
+      };
+      if (dash) opts.dashArray = dash;
+      const c = L.circle([lat, lng], opts);
+      if (withInteraction) c.bindTooltip(tip, ttOpts);
+      return c;
+    };
+
+    _allRingsLayer.addLayer(mkRing(outerKm, '#ffcc00', 0.3,  '4 4', `약한 진동 반경 ${Math.round(outerKm)}km — 진동 감지 수준`));
+    _allRingsLayer.addLayer(mkRing(midKm,   '#ff6600', 0.35, '4 4', `중간 피해 반경 ${Math.round(midKm)}km — 유리창 파손 수준`));
+    _allRingsLayer.addLayer(mkRing(innerKm, '#ff1a1a', 0.4,  null,  `심각한 피해 예상 반경 ${Math.round(innerKm)}km — 건물 붕괴 가능`));
   });
   _allRingsLayer.addTo(map);
 }
@@ -324,9 +361,100 @@ function invalidateSize() {
   if (heatLayer) heatLayer.redraw();
 }
 
+// ── Epicenter Trail ───────────────────────────────────────────────────────────
+
+function addTrailPoint(lat, lng) {
+  if (!_trailEnabled || lat == null || lng == null) return;
+  _trailPoints.push(L.latLng(lat, lng));
+  if (_trailPoints.length > 40) _trailPoints.shift();
+  _redrawTrail();
+}
+
+function clearTrail() {
+  _trailPoints = [];
+  if (_trailCtx && _trailCanvas) {
+    _trailCtx.clearRect(0, 0, _trailCanvas.width, _trailCanvas.height);
+  }
+}
+
+function setTrailEnabled(on) {
+  _trailEnabled = on;
+  if (!on) clearTrail();
+}
+
+function setTrailVisible(on) {
+  if (!_trailCanvas) return;
+  _trailCanvas.style.display = on ? '' : 'none';
+  if (!on && _trailCtx) _trailCtx.clearRect(0, 0, _trailCanvas.width, _trailCanvas.height);
+}
+
+function _redrawTrail() {
+  if (!_trailCtx || !_trailCanvas || !_trailEnabled) return;
+
+  const rect = _trailCanvas.getBoundingClientRect();
+  const w = Math.round(rect.width);
+  const h = Math.round(rect.height);
+  if (!w || !h) return;
+  if (_trailCanvas.width  !== w) _trailCanvas.width  = w;
+  if (_trailCanvas.height !== h) _trailCanvas.height = h;
+
+  _trailCtx.clearRect(0, 0, w, h);
+  if (!map || _trailPoints.length < 2) return;
+
+  const ctx = _trailCtx;
+  const n   = _trailPoints.length;
+
+  // 세그먼트: 오래될수록 얇고 투명, 최신일수록 굵고 밝음
+  for (let i = 1; i < n; i++) {
+    const t  = i / n;
+    const p0 = map.latLngToContainerPoint(_trailPoints[i - 1]);
+    const p1 = map.latLngToContainerPoint(_trailPoints[i]);
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.strokeStyle = `rgba(0,229,255,${(t * 0.6 + 0.05).toFixed(2)})`;
+    ctx.lineWidth   = Math.max(0.5, t * 2.5);
+    ctx.shadowBlur  = t > 0.75 ? 6 : 0;
+    ctx.shadowColor = '#00e5ff';
+    ctx.stroke();
+    ctx.shadowBlur  = 0;
+  }
+
+  // 최신 절반에만 점 표시
+  for (let i = Math.floor(n * 0.5); i < n; i++) {
+    const t = (i + 1) / n;
+    const p = map.latLngToContainerPoint(_trailPoints[i]);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, Math.max(1.5, t * 3), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0,229,255,${(t * 0.45).toFixed(2)})`;
+    ctx.fill();
+  }
+}
+
+// ── Screen Shake ──────────────────────────────────────────────────────────────
+
+function triggerShake(mag) {
+  if (!_shakeEnabled) return;
+  const cls = mag >= 7.5 ? 'eq-shaking-lg'
+            : mag >= 6.5 ? 'eq-shaking-md'
+            : mag >= 5.5 ? 'eq-shaking-sm'
+            : null;
+  if (!cls) return;
+  const el = document.querySelector('.map-wrap');
+  if (!el) return;
+  el.classList.remove('eq-shaking-sm', 'eq-shaking-md', 'eq-shaking-lg');
+  void el.offsetWidth; // reflow로 animation 재시작 강제
+  el.classList.add(cls);
+  el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+}
+
+function setShakeEnabled(on) { _shakeEnabled = on; }
+
 export {
   initMap, renderHeatmap, renderMarkers, renderRippleLayer,
   toggleHeatmap, toggleMarkers, flyTo, invalidateSize, magColor,
   showMMIRings, clearMMIRings, showAllMMIRings, clearAllMMIRings,
   togglePlates, isTsunamiRisk,
+  addTrailPoint, clearTrail, setTrailEnabled, setTrailVisible,
+  triggerShake, setShakeEnabled,
 };

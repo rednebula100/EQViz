@@ -80,10 +80,15 @@ body::before {
 .topbar-sep { width: 1px; height: 20px; background: var(--line); }
 
 .crumbs {
-  display: flex; gap: 6px;
+  display: flex; gap: 6px; align-items: center;
   font-size: 10px; color: var(--ink-dim); letter-spacing: 0.1em; text-transform: uppercase;
+  flex-shrink: 2; min-width: 0; overflow: hidden;
 }
 .crumbs .on { color: var(--ink); }
+#data-period {
+  display: inline-block; max-width: 160px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;
+}
 
 .topbar-spacer { flex: 1; }
 
@@ -91,6 +96,7 @@ body::before {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 4px 10px; border: 1px solid var(--line-bright); border-radius: 2px;
   font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-mid);
+  flex-shrink: 0; white-space: nowrap;
 }
 .dot {
   width: 6px; height: 6px; border-radius: 50%;
@@ -105,11 +111,13 @@ body::before {
   background: none; border: 1px solid var(--line-bright);
   color: var(--ink-dim); cursor: pointer; font-size: 13px;
   padding: 2px 7px; line-height: 1; transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
 }
 .mute-btn:hover   { color: var(--ink); border-color: var(--ink-mid); }
 .mute-btn.unmuted { color: var(--cyan); border-color: rgba(0,229,255,0.45); }
+#btn-settings { color: var(--ink-mid); border-color: var(--ink-mid); }
 
-.clock { font-size: 11px; color: var(--cyan); letter-spacing: 0.06em; }
+.clock { font-size: 11px; color: var(--cyan); letter-spacing: 0.06em; flex-shrink: 0; white-space: nowrap; }
 
 /* ── Main 3-column grid ──────────────────────────────────────────────────── */
 .main {
@@ -755,3 +763,36 @@ path.eq-enter {
   font-size: 10px; letter-spacing: 0.06em;
   flex-shrink: 0;
 }
+
+/* ── Screen shake ────────────────────────────────────────────────────────────
+   .map-wrap에 적용 — Leaflet 내부 transform(.leaflet-map-pane)과 독립적
+   ─────────────────────────────────────────────────────────────────────────── */
+@keyframes eq-shake-sm {
+  0%,100% { transform: translate(0,0); }
+  20%     { transform: translate(-2px, 1px); }
+  40%     { transform: translate(2px,-1px); }
+  60%     { transform: translate(-1px, 2px); }
+  80%     { transform: translate(1px,-1px); }
+}
+@keyframes eq-shake-md {
+  0%,100% { transform: translate(0,0) rotate(0deg); }
+  15%     { transform: translate(-4px, 2px) rotate(-0.15deg); }
+  30%     { transform: translate(4px,-3px) rotate(0.2deg); }
+  50%     { transform: translate(-3px, 3px) rotate(-0.1deg); }
+  70%     { transform: translate(3px,-2px) rotate(0.1deg); }
+  85%     { transform: translate(-2px, 1px); }
+}
+@keyframes eq-shake-lg {
+  0%,100% { transform: translate(0,0) rotate(0deg); }
+  10%     { transform: translate(-8px, 4px) rotate(-0.3deg); }
+  20%     { transform: translate(8px,-5px) rotate(0.3deg); }
+  30%     { transform: translate(-6px, 6px) rotate(-0.2deg); }
+  45%     { transform: translate(6px,-4px) rotate(0.2deg); }
+  58%     { transform: translate(-4px, 3px) rotate(-0.1deg); }
+  70%     { transform: translate(3px,-2px) rotate(0.1deg); }
+  82%     { transform: translate(-2px, 2px); }
+  92%     { transform: translate(1px,-1px); }
+}
+.eq-shaking-sm { animation: eq-shake-sm 0.28s ease-in-out; }
+.eq-shaking-md { animation: eq-shake-md 0.45s ease-in-out; }
+.eq-shaking-lg { animation: eq-shake-lg 0.75s ease-in-out; }
