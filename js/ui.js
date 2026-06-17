@@ -61,7 +61,7 @@ let _globeInited   = false;
 let _autoRotate    = false;
 let _showAllRings  = false;
 let _prevRingsKey  = '';
-const _settings = { liveInterval: 60, maxMarkers: 300, volume: 0.8, minSoundMag: 4, soundTheme: 'SEISMIC', autoPlay: false, shake: true, seismograph: true, trail: true };
+const _settings = { liveInterval: 60, maxMarkers: 300, volume: 0.8, minSoundMag: 4, soundTheme: 'SEISMIC', autoPlay: false, shake: true, seismograph: false, trail: false };
 
 function initUI({ riskData, recentData, stats }) {
   _riskData  = riskData;
