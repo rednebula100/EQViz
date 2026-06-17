@@ -10,8 +10,8 @@ import { initAudio } from './audio.js';
 
 // ── Splash ───────────────────────────────────────────────────────────────────
 
-const SPLASH_MIN_MS = 2800;      // minimum display time (2.5s sweep + buffer)
-const SWEEP_PERIOD  = 2500;      // must match CSS animation-duration on splash-rotate
+const SPLASH_MIN_MS = 3500;      // minimum display time (3.2s sweep + buffer)
+const SWEEP_PERIOD  = 3200;      // must match CSS animation-duration on splash-rotate
 const _splashStart  = Date.now();
 let   _appReady     = false;
 

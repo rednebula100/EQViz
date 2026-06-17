@@ -943,7 +943,7 @@ path.eq-enter {
 /* single rotating wrapper — keeps sweep gradient and line in sync */
 .splash-sweep-wrap {
   position: absolute; inset: 0;
-  animation: splash-rotate 2.5s linear infinite;
+  animation: splash-rotate 3.2s linear infinite;
 }
 
 /* rotating conic trail — from 90deg aligns leading edge with sweep line (3 o'clock) */
