@@ -514,9 +514,12 @@ body::before {
 .cd-body.open { height: 230px; }
 
 .cd-grid {
-  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  display: grid; grid-template-columns: 1fr;
   height: 230px; gap: 1px; background: var(--line);
 }
+
+.chart-card { padding: 8px 12px 14px; }
+.chart-card canvas { width: 100% !important; max-height: 140px; }
 
 .cd-card {
   background: var(--bg-1);

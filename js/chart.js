@@ -148,4 +148,8 @@ function renderScatterChart(data) {
   scatterChart.update('none');
 }
 
-export { initCharts, renderYearlyChart, renderMagnitudeChart, renderScatterChart };
+function resizeCharts() {
+  scatterChart?.resize();
+}
+
+export { initCharts, renderYearlyChart, renderMagnitudeChart, renderScatterChart, resizeCharts };

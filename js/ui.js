@@ -28,7 +28,7 @@ import {
   setShakeEnabled,
 } from './map.js';
 import { loadMonth, loadLive } from './data.js';
-import { initCharts, renderYearlyChart, renderMagnitudeChart, renderScatterChart } from './chart.js';
+import { initCharts, renderYearlyChart, renderMagnitudeChart, renderScatterChart, resizeCharts } from './chart.js';
 import { playEarthquakeSound, setVolume, setMinMag, setTheme } from './audio.js';
 import { initGlobe, renderGlobeHeatmap, clearGlobeHeatmap, setGlobeAutoRotate, renderGlobeBars, clearGlobeBars } from './globe.js';
 import { initSeismograph, addSeismographEvent, setSeismographEnabled } from './seismograph.js';
@@ -740,6 +740,7 @@ function _initChartDrawer() {
   btn.addEventListener('click', () => {
     const open = body.classList.toggle('open');
     btn.classList.toggle('open', open);
+    if (open) setTimeout(resizeCharts, 350); // transition 끝난 뒤 resize
   });
 }
 

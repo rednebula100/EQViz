@@ -233,6 +233,25 @@
     <aside id="right-panel" class="panel panel-r">
       <button class="panel-toggle" data-target="right-panel">▶</button>
 
+      <!-- Yearly frequency chart -->
+      <div class="sec" id="chart-yearly">
+        <div class="sec-head">
+          <span>FREQUENCY · YEARLY</span>
+          <span class="num-mono" style="color:var(--ink-dim);font-size:9px;">2015–2024</span>
+        </div>
+        <div class="chart-card">
+          <canvas id="canvas-yearly"></canvas>
+        </div>
+      </div>
+
+      <!-- Magnitude distribution chart -->
+      <div class="sec" id="chart-magnitude">
+        <div class="sec-head"><span>MAG · DISTRIBUTION</span></div>
+        <div class="chart-card">
+          <canvas id="canvas-magnitude"></canvas>
+        </div>
+      </div>
+
       <!-- Zone detail — hidden until marker click -->
       <div id="detail-panel" class="sec" style="flex:1 1 auto;overflow-y:auto;" hidden>
         <div class="sec-head"><span>ZONE DETAIL</span><span class="tag">SELECTED</span></div>
@@ -253,15 +272,7 @@
     <div class="cd-body" id="cd-body">
       <div class="cd-grid">
         <div class="cd-card">
-          <div class="cd-label">YEARLY COUNT · 2015–2024</div>
-          <canvas id="canvas-yearly"></canvas>
-        </div>
-        <div class="cd-card">
-          <div class="cd-label">MAG DISTRIBUTION</div>
-          <canvas id="canvas-magnitude"></canvas>
-        </div>
-        <div class="cd-card">
-          <div class="cd-label">DEPTH vs MAG</div>
+          <div class="cd-label">DEPTH vs MAG · CURRENT WINDOW</div>
           <canvas id="canvas-scatter"></canvas>
         </div>
       </div>
