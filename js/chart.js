@@ -1,17 +1,50 @@
 /**
  * chart.js — Chart.js 기반 차트
- * 우측 패널: yearlyChart / magChart
- * 드로어 상단: scatterChart / hourChart / dayChart
- * 드로어 하단: grChart (Gutenberg-Richter) / mtChart (Magnitude-Time)
+ *
+ * 우측 패널: yearlyChart / magChart / riskZoneChart
+ * 드로어 상단: scatterChart (default span2) / depthChart / hourChart(legacy) / dayChart(legacy)
+ * 드로어 하단: grChart / mtChart
  */
 
-let yearlyChart  = null;
-let magChart     = null;
-let scatterChart = null;
-let hourChart    = null;
-let dayChart     = null;
-let grChart      = null;
-let mtChart      = null;
+let yearlyChart   = null;
+let magChart      = null;
+let riskZoneChart = null;
+let scatterChart  = null;
+let depthChart    = null;
+let hourChart     = null;
+let dayChart      = null;
+let grChart       = null;
+let mtChart       = null;
+
+let _legacyMode = false;
+
+/* ── 색상 헬퍼 ────────────────────────────────────────────────────────────── */
+
+// Colab 컬러맵 근사 (yellow→orange→red→magenta)
+function _magToColor(mag, alpha = 0.7) {
+  const t = Math.max(0, Math.min(1, (mag - 4.0) / 4.3));
+  const stops = [
+    [255, 255,  80],  // t=0    (M4.0) yellow
+    [255, 155,   0],  // t=0.25 (M5.1) orange
+    [255,  40,  40],  // t=0.5  (M6.2) red
+    [200,   0, 110],  // t=0.75 (M7.2) pink
+    [120,   0, 200],  // t=1.0  (M8.3) purple
+  ];
+  const seg = t * 4;
+  const i   = Math.min(3, Math.floor(seg));
+  const f   = seg - i;
+  const [r1,g1,b1] = stops[i];
+  const [r2,g2,b2] = stops[i + 1];
+  return `rgba(${Math.round(r1+(r2-r1)*f)},${Math.round(g1+(g2-g1)*f)},${Math.round(b1+(b2-b1)*f)},${alpha})`;
+}
+
+function _depthColor(d, alpha) {
+  return d < 70  ? `rgba(0,229,255,${alpha})`
+       : d < 300 ? `rgba(255,193,7,${alpha})`
+                 : `rgba(244,67,54,${alpha})`;
+}
+
+/* ── 공통 옵션 ────────────────────────────────────────────────────────────── */
 
 const _SCALE = {
   ticks: { color: '#56687a', font: { size: 9 }, maxTicksLimit: 8 },
@@ -25,17 +58,14 @@ const _BASE = {
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: '#0c1a2e',
-      titleColor: '#c8d8e8',
-      bodyColor: '#6a7f94',
-      borderColor: '#1e3a5a',
-      borderWidth: 1,
-      padding: 7,
+      backgroundColor: '#0c1a2e', titleColor: '#c8d8e8', bodyColor: '#6a7f94',
+      borderColor: '#1e3a5a', borderWidth: 1, padding: 7,
     },
   },
 };
 
-/* M-T diagram용 stem 플러그인 (이 차트에만 적용) */
+/* ── M-T stem 플러그인 ────────────────────────────────────────────────────── */
+
 const _stemPlugin = {
   id: 'stemLines',
   afterDatasetsDraw(chart) {
@@ -46,19 +76,19 @@ const _stemPlugin = {
     ctx.lineWidth = 0.8;
     chart.data.datasets[0].data.forEach(pt => {
       const m  = pt.y ?? 4;
-      const px = x.getPixelForValue(pt.x);
-      const py = y.getPixelForValue(pt.y);
       ctx.strokeStyle = m >= 6.5 ? 'rgba(244,67,54,0.30)'
                       : m >= 5.5 ? 'rgba(255,193,7,0.28)'
                                  : 'rgba(0,229,255,0.18)';
       ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.lineTo(px, bottom);
+      ctx.moveTo(x.getPixelForValue(pt.x), y.getPixelForValue(pt.y));
+      ctx.lineTo(x.getPixelForValue(pt.x), bottom);
       ctx.stroke();
     });
     ctx.restore();
   },
 };
+
+/* ── 초기화 ───────────────────────────────────────────────────────────────── */
 
 function _getCtx(id) {
   const el = document.getElementById(id);
@@ -68,53 +98,68 @@ function _getCtx(id) {
 }
 
 function initCharts() {
-  /* ── 우측 패널 ────────────────────────────────────────────── */
+  /* 우측 패널: Yearly (green) */
   const ctxY = _getCtx('canvas-yearly');
   if (ctxY) {
     yearlyChart = new Chart(ctxY, {
       type: 'bar',
       data: { labels: [], datasets: [{ data: [],
-        backgroundColor: 'rgba(0,180,220,0.45)', borderColor: 'rgba(0,229,255,0.75)',
+        backgroundColor: 'rgba(76,175,80,0.55)', borderColor: 'rgba(102,187,106,0.85)',
         borderWidth: 1, borderRadius: 2 }] },
       options: { ..._BASE, scales: { x: _SCALE, y: { ..._SCALE, beginAtZero: true } } },
     });
   }
 
+  /* 우측 패널: Magnitude Distribution (red/salmon) */
   const ctxM = _getCtx('canvas-magnitude');
   if (ctxM) {
     magChart = new Chart(ctxM, {
       type: 'bar',
       data: { labels: [], datasets: [{ data: [],
-        backgroundColor: 'rgba(233,69,96,0.50)', borderColor: 'rgba(233,69,96,0.85)',
+        backgroundColor: 'rgba(229,115,115,0.65)', borderColor: 'rgba(239,83,80,0.85)',
         borderWidth: 1, borderRadius: 2 }] },
       options: { ..._BASE, scales: { x: _SCALE, y: { ..._SCALE, beginAtZero: true } } },
     });
   }
 
-  /* ── 드로어 상단: scatter ─────────────────────────────────── */
+  /* 우측 패널: Risk Zone Distribution */
+  const ctxRZ = _getCtx('canvas-riskzone');
+  if (ctxRZ) {
+    riskZoneChart = new Chart(ctxRZ, {
+      type: 'bar',
+      data: {
+        labels: ['HIGH', 'MEDIUM', 'LOW'],
+        datasets: [{ data: [0, 0, 0],
+          backgroundColor: ['rgba(244,67,54,0.60)', 'rgba(255,193,7,0.60)', 'rgba(76,175,80,0.60)'],
+          borderColor:     ['rgba(244,67,54,0.90)', 'rgba(255,193,7,0.90)', 'rgba(76,175,80,0.90)'],
+          borderWidth: 1, borderRadius: 2 }],
+      },
+      options: { ..._BASE, scales: { x: _SCALE, y: { ..._SCALE, beginAtZero: true } } },
+    });
+  }
+
+  /* 드로어: Scatter — 색상 함수는 _legacyMode 참조 */
   const ctxS = _getCtx('canvas-scatter');
   if (ctxS) {
     scatterChart = new Chart(ctxS, {
       type: 'scatter',
       data: { datasets: [{
         data: [],
-        pointRadius:  ctx => Math.max(2, Math.min(10, ((ctx.raw?.x ?? 4) - 3.5) * 2.2)),
+        pointRadius:      ctx => Math.max(2, Math.min(9, ((ctx.raw?.x ?? 4) - 3.5) * 2.2)),
         pointHoverRadius: 7,
-        backgroundColor: ctx => {
-          const d = ctx.raw?.y ?? 0;
-          return d < 70 ? 'rgba(0,229,255,0.55)' : d < 300 ? 'rgba(255,193,7,0.50)' : 'rgba(244,67,54,0.50)';
-        },
-        borderColor: ctx => {
-          const d = ctx.raw?.y ?? 0;
-          return d < 70 ? 'rgba(0,229,255,0.85)' : d < 300 ? 'rgba(255,193,7,0.80)' : 'rgba(244,67,54,0.80)';
-        },
+        backgroundColor:  ctx => _legacyMode
+          ? _depthColor(ctx.raw?.y ?? 0, 0.55)
+          : _magToColor(ctx.raw?.x ?? 4, 0.70),
+        borderColor:      ctx => _legacyMode
+          ? _depthColor(ctx.raw?.y ?? 0, 0.85)
+          : _magToColor(ctx.raw?.x ?? 4, 0.90),
         borderWidth: 0.5,
       }] },
       options: {
         ..._BASE,
         scales: {
-          x: { ..._SCALE, min: 4, title: { display: true, text: 'MAG', color: '#4a5e72', font: { size: 9 } } },
-          y: { ..._SCALE, reverse: true, title: { display: true, text: 'DEPTH km', color: '#4a5e72', font: { size: 9 } } },
+          x: { ..._SCALE, min: 4, title: { display: true, text: 'MAGNITUDE', color: '#4a5e72', font: { size: 9 } } },
+          y: { ..._SCALE, reverse: false, title: { display: true, text: 'DEPTH km', color: '#4a5e72', font: { size: 9 } } },
         },
         plugins: { ..._BASE.plugins, tooltip: { ..._BASE.plugins.tooltip,
           callbacks: { label: ctx => ` M${ctx.raw.x.toFixed(1)}  ${ctx.raw.y}km` } } },
@@ -122,7 +167,24 @@ function initCharts() {
     });
   }
 
-  /* ── 드로어 상단: hour ───────────────────────────────────── */
+  /* 드로어: Depth Distribution (blue) */
+  const ctxDD = _getCtx('canvas-depth');
+  if (ctxDD) {
+    depthChart = new Chart(ctxDD, {
+      type: 'bar',
+      data: { labels: [], datasets: [{ data: [],
+        backgroundColor: 'rgba(100,181,246,0.55)', borderColor: 'rgba(100,181,246,0.85)',
+        borderWidth: 1, borderRadius: 2 }] },
+      options: { ..._BASE, indexAxis: 'y',
+        scales: {
+          x: { ..._SCALE, beginAtZero: true, title: { display: true, text: 'COUNT', color: '#4a5e72', font: { size: 9 } } },
+          y: { ..._SCALE },
+        },
+      },
+    });
+  }
+
+  /* 드로어: Hour (legacy) */
   const ctxH = _getCtx('canvas-hour');
   if (ctxH) {
     hourChart = new Chart(ctxH, {
@@ -140,7 +202,7 @@ function initCharts() {
     });
   }
 
-  /* ── 드로어 상단: day ────────────────────────────────────── */
+  /* 드로어: Day (legacy) */
   const ctxD = _getCtx('canvas-day');
   if (ctxD) {
     dayChart = new Chart(ctxD, {
@@ -158,7 +220,7 @@ function initCharts() {
     });
   }
 
-  /* ── 드로어 하단: Gutenberg-Richter ─────────────────────── */
+  /* 드로어: G-R Law */
   const ctxGR = _getCtx('canvas-gr');
   if (ctxGR) {
     grChart = new Chart(ctxGR, {
@@ -166,34 +228,23 @@ function initCharts() {
       data: {
         labels: ['4.0','4.5','5.0','5.5','6.0','6.5','7.0','7.5','8.0'],
         datasets: [
-          { // 실측값 (점+선)
-            data: [],
-            borderColor: 'rgba(0,229,255,0.8)', backgroundColor: 'rgba(0,229,255,0.9)',
-            borderWidth: 1.5, pointRadius: 4, pointHoverRadius: 6,
-            spanGaps: false,
-          },
-          { // b값 회귀선
-            data: [], borderColor: 'rgba(255,193,7,0.6)', backgroundColor: 'transparent',
-            borderWidth: 1, borderDash: [4, 3], pointRadius: 0,
-            spanGaps: true,
-          },
+          { data: [], borderColor: 'rgba(0,229,255,0.8)', backgroundColor: 'rgba(0,229,255,0.9)',
+            borderWidth: 1.5, pointRadius: 4, spanGaps: false },
+          { data: [], borderColor: 'rgba(255,193,7,0.6)', backgroundColor: 'transparent',
+            borderWidth: 1, borderDash: [4, 3], pointRadius: 0, spanGaps: true },
         ],
       },
-      options: {
-        ..._BASE,
-        scales: {
-          x: { ..._SCALE, title: { display: true, text: 'MAGNITUDE', color: '#4a5e72', font: { size: 9 } } },
-          y: { ..._SCALE, title: { display: true, text: 'log₁₀(N ≥ M)', color: '#4a5e72', font: { size: 9 } } },
-        },
-        plugins: { ..._BASE.plugins, tooltip: { ..._BASE.plugins.tooltip,
-          callbacks: { label: ctx => ctx.datasetIndex === 0
-            ? ` N ≥ M${ctx.label}: ${Math.round(10 ** ctx.raw)}건`
-            : ` 회귀선` } } },
+      options: { ..._BASE, scales: {
+        x: { ..._SCALE, title: { display: true, text: 'MAGNITUDE', color: '#4a5e72', font: { size: 9 } } },
+        y: { ..._SCALE, title: { display: true, text: 'log₁₀(N ≥ M)', color: '#4a5e72', font: { size: 9 } } },
       },
+      plugins: { ..._BASE.plugins, tooltip: { ..._BASE.plugins.tooltip,
+        callbacks: { label: ctx => ctx.datasetIndex === 0
+          ? ` N ≥ M${ctx.label}: ${Math.round(10 ** ctx.raw)}` : ` fit` } } } },
     });
   }
 
-  /* ── 드로어 하단: Magnitude-Time ─────────────────────────── */
+  /* 드로어: M-T diagram */
   const ctxMT = _getCtx('canvas-mt');
   if (ctxMT) {
     mtChart = new Chart(ctxMT, {
@@ -201,9 +252,9 @@ function initCharts() {
       plugins: [_stemPlugin],
       data: { datasets: [{
         data: [],
-        pointRadius:  ctx => Math.max(2, Math.min(9, ((ctx.raw?.y ?? 4) - 3.5) * 2.0)),
+        pointRadius:      ctx => Math.max(2, Math.min(9, ((ctx.raw?.y ?? 4) - 3.5) * 2.0)),
         pointHoverRadius: 7,
-        backgroundColor: ctx => {
+        backgroundColor:  ctx => {
           const m = ctx.raw?.y ?? 4;
           return m >= 6.5 ? 'rgba(244,67,54,0.90)' : m >= 5.5 ? 'rgba(255,193,7,0.85)' : 'rgba(0,229,255,0.65)';
         },
@@ -213,21 +264,17 @@ function initCharts() {
         },
         borderWidth: 0.8,
       }] },
-      options: {
-        ..._BASE,
-        animation: false,
-        scales: {
-          x: { ..._SCALE, title: { display: true, text: 'DAY OF MONTH (UTC)', color: '#4a5e72', font: { size: 9 } } },
-          y: { ..._SCALE, min: 3.8, title: { display: true, text: 'MAG', color: '#4a5e72', font: { size: 9 } } },
-        },
-        plugins: { ..._BASE.plugins, tooltip: { ..._BASE.plugins.tooltip,
-          callbacks: { label: ctx => ` Day ${ctx.raw.x.toFixed(2)}  M${ctx.raw.y.toFixed(1)}` } } },
+      options: { ..._BASE, animation: false, scales: {
+        x: { ..._SCALE, title: { display: true, text: 'DAY OF MONTH (UTC)', color: '#4a5e72', font: { size: 9 } } },
+        y: { ..._SCALE, min: 3.8, title: { display: true, text: 'MAG', color: '#4a5e72', font: { size: 9 } } },
       },
+      plugins: { ..._BASE.plugins, tooltip: { ..._BASE.plugins.tooltip,
+        callbacks: { label: ctx => ` Day ${ctx.raw.x.toFixed(2)}  M${ctx.raw.y.toFixed(1)}` } } } },
     });
   }
 }
 
-/* ── 렌더 함수 ──────────────────────────────────────────────── */
+/* ── 렌더 함수 ────────────────────────────────────────────────────────────── */
 
 function renderYearlyChart(stats) {
   if (!yearlyChart || !stats?.yearly) return;
@@ -255,12 +302,38 @@ function renderMagnitudeChart(data) {
   magChart.update();
 }
 
+function renderRiskZoneChart(riskData) {
+  if (!riskZoneChart) return;
+  const counts = { high: 0, medium: 0, low: 0 };
+  (riskData || []).forEach(({ risk_level }) => {
+    if (risk_level in counts) counts[risk_level]++;
+  });
+  riskZoneChart.data.datasets[0].data = [counts.high, counts.medium, counts.low];
+  riskZoneChart.update();
+}
+
 function renderScatterChart(data) {
   if (!scatterChart) return;
   scatterChart.data.datasets[0].data = (data || [])
     .filter(eq => eq.magnitude != null && eq.depth != null)
     .map(eq => ({ x: +eq.magnitude.toFixed(2), y: +eq.depth.toFixed(1) }));
+  scatterChart.options.scales.y.reverse = _legacyMode;
   scatterChart.update('none');
+}
+
+function renderDepthChart(data) {
+  if (!depthChart) return;
+  const LABELS = ['0–10','10–30','30–70','70–150','150–300','300–500','500+'];
+  const LIMITS = [10, 30, 70, 150, 300, 500, Infinity];
+  const counts = new Array(7).fill(0);
+  (data || []).forEach(({ depth: d }) => {
+    if (d == null) return;
+    const i = LIMITS.findIndex(lim => d < lim);
+    if (i >= 0) counts[i]++;
+  });
+  depthChart.data.labels           = LABELS;
+  depthChart.data.datasets[0].data = counts;
+  depthChart.update();
 }
 
 function renderHourChart(data) {
@@ -295,10 +368,8 @@ function renderGRChart(data) {
     const n = mags.filter(v => v >= m).length;
     return n > 0 ? +Math.log10(n).toFixed(4) : null;
   });
-
   grChart.data.datasets[0].data = logN;
 
-  // 최소제곱 회귀로 b값 계산
   const pts = THRESHOLDS.map((m, i) => [m, logN[i]]).filter(([, l]) => l != null);
   let bLine = new Array(9).fill(null);
   let bLabel = 'G-R LAW';
@@ -310,13 +381,11 @@ function renderGRChart(data) {
     const den = pts.reduce((s, [m]) => s + (m - xm) ** 2, 0);
     if (den) {
       const slope = num / den;
-      const bVal  = -slope;
       const aVal  = ym - slope * xm;
-      bLine = THRESHOLDS.map(m => +(aVal + slope * m).toFixed(4));
-      bLabel = `G-R LAW  ·  b = ${bVal.toFixed(3)}`;
+      bLine  = THRESHOLDS.map(m => +(aVal + slope * m).toFixed(4));
+      bLabel = `G-R LAW  ·  b = ${(-slope).toFixed(3)}`;
     }
   }
-
   grChart.data.datasets[1].data = bLine;
   const el = document.getElementById('gr-label');
   if (el) el.textContent = bLabel;
@@ -337,8 +406,18 @@ function renderMTChart(data) {
   mtChart.update('none');
 }
 
+function setLegacyMode(on) {
+  _legacyMode = on;
+  // scatter 색상·Y축 즉시 반영
+  if (scatterChart) {
+    scatterChart.options.scales.y.reverse = on;
+    scatterChart.update('none');
+  }
+}
+
 function resizeCharts() {
   scatterChart?.resize();
+  depthChart?.resize();
   hourChart?.resize();
   dayChart?.resize();
   grChart?.resize();
@@ -346,7 +425,7 @@ function resizeCharts() {
 }
 
 export {
-  initCharts, renderYearlyChart, renderMagnitudeChart,
-  renderScatterChart, renderHourChart, renderDayChart,
-  renderGRChart, renderMTChart, resizeCharts,
+  initCharts, renderYearlyChart, renderMagnitudeChart, renderRiskZoneChart,
+  renderScatterChart, renderDepthChart, renderHourChart, renderDayChart,
+  renderGRChart, renderMTChart, setLegacyMode, resizeCharts,
 };

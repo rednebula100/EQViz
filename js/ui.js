@@ -28,7 +28,7 @@ import {
   setShakeEnabled,
 } from './map.js';
 import { loadMonth, loadLive } from './data.js';
-import { initCharts, renderYearlyChart, renderMagnitudeChart, renderScatterChart, renderHourChart, renderDayChart, renderGRChart, renderMTChart, resizeCharts } from './chart.js';
+import { initCharts, renderYearlyChart, renderMagnitudeChart, renderRiskZoneChart, renderScatterChart, renderDepthChart, renderHourChart, renderDayChart, renderGRChart, renderMTChart, setLegacyMode, resizeCharts } from './chart.js';
 import { playEarthquakeSound, setVolume, setMinMag, setTheme } from './audio.js';
 import { initGlobe, renderGlobeHeatmap, clearGlobeHeatmap, setGlobeAutoRotate, renderGlobeBars, clearGlobeBars } from './globe.js';
 import { initSeismograph, addSeismographEvent, setSeismographEnabled } from './seismograph.js';
@@ -61,7 +61,7 @@ let _globeInited   = false;
 let _autoRotate    = false;
 let _showAllRings  = false;
 let _prevRingsKey  = '';
-const _settings = { liveInterval: 60, maxMarkers: 300, volume: 0.8, minSoundMag: 4, soundTheme: 'SEISMIC', autoPlay: false, shake: true, seismograph: false, trail: false };
+const _settings = { liveInterval: 60, maxMarkers: 300, volume: 0.8, minSoundMag: 4, soundTheme: 'SEISMIC', autoPlay: false, shake: true, seismograph: false, trail: false, legacyCharts: false };
 
 function initUI({ riskData, recentData, stats }) {
   _riskData  = riskData;
@@ -86,6 +86,7 @@ function initUI({ riskData, recentData, stats }) {
   initSeismograph();
   initCharts();
   renderYearlyChart(stats);
+  renderRiskZoneChart(_riskData);
   renderScatterChart(recentData);
   renderHourChart(recentData);
   renderDayChart(recentData);
@@ -410,6 +411,7 @@ async function _refreshLive() {
     renderRecentList(data);
     renderMagnitudeChart(data);
     renderScatterChart(data);
+    renderDepthChart(data);
     renderHourChart(data);
     renderDayChart(data);
     renderGRChart(data);
@@ -626,6 +628,7 @@ function _setSlot(slot, incremental = false) {
     renderRecentList(windowData);
     renderMagnitudeChart(windowData);
     renderScatterChart(windowData);
+    renderDepthChart(windowData);
     renderHourChart(windowData);
     renderDayChart(windowData);
     renderGRChart(windowData);
@@ -642,6 +645,7 @@ function _scheduleListUpdate() {
     renderRecentList(_recentData);
     renderMagnitudeChart(_recentData);
     renderScatterChart(_recentData);
+    renderDepthChart(_recentData);
     renderHourChart(_recentData);
     renderDayChart(_recentData);
     renderGRChart(_recentData);
@@ -838,6 +842,16 @@ function _initSettings() {
     radio.addEventListener('change', () => {
       _settings.trail = radio.value === 'true';
       setTrailEnabled(_settings.trail);
+    });
+  });
+
+  overlay.querySelectorAll('input[name="legacyCharts"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      _settings.legacyCharts = radio.value === 'true';
+      setLegacyMode(_settings.legacyCharts);
+      document.getElementById('cd-grid')?.classList.toggle('legacy', _settings.legacyCharts);
+      renderScatterChart(_recentData);
+      resizeCharts();
     });
   });
 }

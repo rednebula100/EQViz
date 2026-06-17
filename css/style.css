@@ -520,6 +520,31 @@ body::before {
 }
 .cd-wide { grid-column: span 2; }
 
+/* Default mode: scatter spans 2 cols, depth visible, hour/day hidden */
+#scatter-card { grid-column: span 2; }
+#hour-chart-card, #day-chart-card { display: none; }
+
+/* Legacy mode */
+.cd-grid.legacy #scatter-card { grid-column: span 1; }
+.cd-grid.legacy #depth-chart-card { display: none; }
+.cd-grid.legacy #hour-chart-card,
+.cd-grid.legacy #day-chart-card { display: flex; flex-direction: column; }
+.cd-grid.legacy .cd-colorbar { display: none; }
+
+/* Scatter colorbar row */
+.cd-chart-row { display: flex; flex: 1; min-height: 0; }
+.cd-chart-row canvas { flex: 1; min-height: 0; }
+.cd-colorbar { display: flex; gap: 3px; padding: 2px 0 2px 8px; flex-shrink: 0; }
+.cd-cb-gradient {
+  width: 10px; border-radius: 2px;
+  background: linear-gradient(to top,
+    rgb(255,255,80), rgb(255,155,0), rgb(255,40,40), rgb(200,0,110), rgb(120,0,200));
+}
+.cd-cb-ticks {
+  display: flex; flex-direction: column; justify-content: space-between;
+  font-size: 8px; color: var(--ink-dim); font-family: var(--mono); padding: 1px 0;
+}
+
 .chart-card { padding: 8px 12px 14px; }
 .chart-card canvas { width: 100% !important; max-height: 140px; }
 

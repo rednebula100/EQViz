@@ -67,19 +67,19 @@
         <div class="sec-body">
           <div class="stat-grid">
             <div class="stat">
-              <div class="lbl">총 지진</div>
+              <div class="lbl">TOTAL EVENTS</div>
               <div class="val num-mono" id="stat-total">—</div>
             </div>
             <div class="stat">
-              <div class="lbl">평균 진도</div>
+              <div class="lbl">AVG MAG</div>
               <div class="val num-mono cyan" id="stat-avg-mag">—</div>
             </div>
             <div class="stat">
-              <div class="lbl">최대 진도</div>
+              <div class="lbl">MAX MAG</div>
               <div class="val num-mono red" id="stat-max-mag">—</div>
             </div>
             <div class="stat">
-              <div class="lbl">고위험 구역</div>
+              <div class="lbl">HIGH RISK ZONES</div>
               <div class="val num-mono orange" id="stat-high-risk">—</div>
             </div>
           </div>
@@ -252,6 +252,14 @@
         </div>
       </div>
 
+      <!-- Risk zone distribution chart -->
+      <div class="sec" id="chart-riskzone">
+        <div class="sec-head"><span>RISK ZONE · DISTRIBUTION</span></div>
+        <div class="chart-card">
+          <canvas id="canvas-riskzone"></canvas>
+        </div>
+      </div>
+
       <!-- Zone detail — hidden until marker click -->
       <div id="detail-panel" class="sec" style="flex:1 1 auto;overflow-y:auto;" hidden>
         <div class="sec-head"><span>ZONE DETAIL</span><span class="tag">SELECTED</span></div>
@@ -270,27 +278,56 @@
       <span class="cd-arrow">▲</span>
     </div>
     <div class="cd-body" id="cd-body">
-      <div class="cd-grid">
-        <div class="cd-card">
-          <div class="cd-label">DEPTH vs MAG <span style="color:var(--cyan);opacity:.45">▪ cyan&lt;70km ▪ yellow&lt;300km ▪ red 300km+</span></div>
-          <canvas id="canvas-scatter"></canvas>
+      <div class="cd-grid" id="cd-grid">
+
+        <!-- SCATTER: default span2 / legacy span1; colorbar hidden in legacy -->
+        <div class="cd-card" id="scatter-card">
+          <div class="cd-label" id="scatter-label">MAG vs DEPTH</div>
+          <div class="cd-chart-row">
+            <canvas id="canvas-scatter"></canvas>
+            <div class="cd-colorbar" id="scatter-colorbar">
+              <div class="cd-cb-gradient"></div>
+              <div class="cd-cb-ticks">
+                <span>8.3</span>
+                <span>7.0</span>
+                <span>6.0</span>
+                <span>5.0</span>
+                <span>4.0</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="cd-card">
+
+        <!-- DEPTH DISTRIBUTION: default mode only -->
+        <div class="cd-card" id="depth-chart-card">
+          <div class="cd-label">DEPTH DISTRIBUTION</div>
+          <canvas id="canvas-depth"></canvas>
+        </div>
+
+        <!-- HOUR OF DAY: legacy mode only -->
+        <div class="cd-card" id="hour-chart-card">
           <div class="cd-label">HOUR OF DAY (UTC)</div>
           <canvas id="canvas-hour"></canvas>
         </div>
-        <div class="cd-card">
+
+        <!-- DAY OF MONTH: legacy mode only -->
+        <div class="cd-card" id="day-chart-card">
           <div class="cd-label">DAY OF MONTH</div>
           <canvas id="canvas-day"></canvas>
         </div>
-        <div class="cd-card">
+
+        <!-- G-R LAW: always visible -->
+        <div class="cd-card" id="gr-chart-card">
           <div class="cd-label" id="gr-label">G-R LAW</div>
           <canvas id="canvas-gr"></canvas>
         </div>
-        <div class="cd-card cd-wide">
+
+        <!-- M-T DIAGRAM: always span2 -->
+        <div class="cd-card cd-wide" id="mt-chart-card">
           <div class="cd-label">MAGNITUDE–TIME <span style="color:var(--cyan);opacity:.45">▪ cyan M4+ ▪ yellow M5.5+ ▪ red M6.5+</span></div>
           <canvas id="canvas-mt"></canvas>
         </div>
+
       </div>
     </div>
   </div>
@@ -430,6 +467,14 @@
         <div class="s-opts">
           <label class="s-opt"><input type="radio" name="trail" value="true"> ON</label>
           <label class="s-opt"><input type="radio" name="trail" value="false" checked> OFF</label>
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <span class="settings-label">LEGACY CHARTS</span>
+        <div class="s-opts">
+          <label class="s-opt"><input type="radio" name="legacyCharts" value="false" checked> OFF</label>
+          <label class="s-opt"><input type="radio" name="legacyCharts" value="true"> ON</label>
         </div>
       </div>
     </div>
