@@ -534,7 +534,7 @@ body::before {
 /* Scatter colorbar row */
 .cd-chart-row { display: flex; flex: 1; min-height: 0; }
 .cd-chart-row canvas { flex: 1; min-height: 0; }
-.cd-colorbar { display: flex; gap: 3px; padding: 2px 0 2px 8px; flex-shrink: 0; }
+.cd-colorbar { display: flex; gap: 3px; padding-left: 8px; flex-shrink: 0; }
 .cd-cb-gradient {
   width: 10px; border-radius: 2px;
   background: linear-gradient(to top,

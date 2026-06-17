@@ -64,6 +64,22 @@ const _BASE = {
   },
 };
 
+/* scatter 컬러바를 Chart.js plot area에 정확히 맞추는 플러그인 */
+const _colorbarSyncPlugin = {
+  id: 'colorbarSync',
+  afterRender(chart) {
+    const ca = chart.chartArea;
+    const cb = document.getElementById('scatter-colorbar');
+    if (!cb || !ca) return;
+    const t = Math.round(ca.top);
+    const b = Math.round(chart.height - ca.bottom);
+    if (cb._ct === t && cb._cb === b) return;
+    cb._ct = t; cb._cb = b;
+    cb.style.paddingTop    = t + 'px';
+    cb.style.paddingBottom = b + 'px';
+  },
+};
+
 /* ── M-T stem 플러그인 ────────────────────────────────────────────────────── */
 
 const _stemPlugin = {
@@ -143,6 +159,7 @@ function initCharts() {
   if (ctxS) {
     scatterChart = new Chart(ctxS, {
       type: 'scatter',
+      plugins: [_colorbarSyncPlugin],
       data: { datasets: [{
         data: [],
         pointRadius:      ctx => Math.max(2, Math.min(9, ((ctx.raw?.x ?? 4) - 3.5) * 2.2)),

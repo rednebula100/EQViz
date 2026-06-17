@@ -84,6 +84,8 @@ function initUI({ riskData, recentData, stats }) {
   _initSettings();
   _initChartDrawer();
   initSeismograph();
+  setSeismographEnabled(_settings.seismograph);
+  setTrailEnabled(_settings.trail);
   initCharts();
   renderYearlyChart(stats);
   renderRiskZoneChart(_riskData);
