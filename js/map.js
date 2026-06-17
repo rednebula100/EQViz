@@ -16,6 +16,7 @@
 
 let map = null;
 let heatLayer = null;
+let _tileLayer = null;
 let markerLayer = null;
 let rippleLayer = null;
 let _mmiLayer      = null;
@@ -71,7 +72,7 @@ function initMap(containerId) {
   });
   map.on('moveend', _redrawTrail);
 
-  L.tileLayer(
+  _tileLayer = L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
     {
       attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a>',
@@ -457,11 +458,19 @@ function triggerShake(mag) {
 
 function setShakeEnabled(on) { _shakeEnabled = on; }
 
+function setMapTheme(isLight) {
+  if (!_tileLayer) return;
+  _tileLayer.setUrl(isLight
+    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Canvas/MapServer/tile/{z}/{y}/{x}'
+    : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+  );
+}
+
 export {
   initMap, renderHeatmap, renderMarkers, renderRippleLayer,
   toggleHeatmap, toggleMarkers, flyTo, invalidateSize, magColor,
   showMMIRings, clearMMIRings, showAllMMIRings, clearAllMMIRings,
   togglePlates, isTsunamiRisk,
   addTrailPoint, clearTrail, setTrailEnabled, setTrailVisible,
-  triggerShake, setShakeEnabled,
+  triggerShake, setShakeEnabled, setMapTheme,
 };

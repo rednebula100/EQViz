@@ -26,6 +26,7 @@ import {
   setTrailVisible,
   triggerShake,
   setShakeEnabled,
+  setMapTheme,
 } from './map.js';
 import { loadMonth, loadLive } from './data.js';
 import { initCharts, renderYearlyChart, renderFreqChart, renderMagnitudeChart, renderRiskZoneChart, renderScatterChart, renderDepthChart, renderHourChart, renderDayChart, renderGRChart, renderMTChart, setLegacyMode, resizeCharts } from './chart.js';
@@ -84,6 +85,8 @@ function initUI({ riskData, recentData, stats }) {
   _initPlatesButton();
   _initAllRingsButton();
   _initSettings();
+  _initTheme();
+  _initCSV();
   _initFreqToggle();
   _initExtraCharts();
   _initChartDrawer();
@@ -174,14 +177,37 @@ function showDetail(eq) {
     zone.appendChild(dlEl);
   }
   dlEl.innerHTML = [
-    ['위치', _esc(eq.place)],
-    ['진도', `M ${eq.magnitude != null ? eq.magnitude.toFixed(1) : '?'}`],
-    ['깊이', `${Number(eq.depth).toFixed(1)} km`],
-    ['발생시각', _esc(eq.time)],
-    ['위험등급', riskLevel],
-    ['위도', `${Number(eq.latitude).toFixed(3)}°`],
-    ['경도', `${Number(eq.longitude).toFixed(3)}°`],
+    ['LOCATION',  _esc(eq.place)],
+    ['MAGNITUDE', `M ${eq.magnitude != null ? eq.magnitude.toFixed(1) : '?'}`],
+    ['DEPTH',     `${Number(eq.depth).toFixed(1)} km`],
+    ['TIME',      _esc(eq.time)],
+    ['RISK ZONE', riskLevel],
+    ['LAT / LON', `${Number(eq.latitude).toFixed(3)}° / ${Number(eq.longitude).toFixed(3)}°`],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+
+  // USGS link
+  let linkEl = zone.querySelector('#detail-usgs-link');
+  if (!linkEl) {
+    linkEl = document.createElement('a');
+    linkEl.id = 'detail-usgs-link';
+    linkEl.className = 'detail-usgs-btn';
+    linkEl.target = '_blank'; linkEl.rel = 'noopener';
+    zone.appendChild(linkEl);
+  }
+  if (eq.id) {
+    linkEl.href = `https://earthquake.usgs.gov/earthquakes/eventpage/${eq.id}/executive`;
+    linkEl.textContent = '↗ USGS EVENT PAGE';
+    linkEl.style.display = '';
+  } else {
+    linkEl.style.display = 'none';
+  }
+
+  // close button
+  const closeBtn = document.getElementById('btn-detail-close');
+  if (closeBtn && !closeBtn._wired) {
+    closeBtn._wired = true;
+    closeBtn.addEventListener('click', () => { panel.hidden = true; clearMMIRings(); });
+  }
 
   // 여진 목록 (하단)
   let asEl = zone.querySelector('#aftershock-section');
@@ -919,6 +945,48 @@ function _initSettings() {
       renderScatterChart(_recentData);
       resizeCharts();
     });
+  });
+}
+
+function _initTheme() {
+  const btn = document.getElementById('btn-theme');
+  if (!btn) return;
+  const CLS = 'light-theme';
+  const _apply = (light) => {
+    document.documentElement.classList.toggle(CLS, light);
+    btn.textContent = light ? '☾' : '☀';
+    setMapTheme(light);
+    localStorage.setItem('eqviz-theme', light ? 'light' : 'dark');
+  };
+  _apply(localStorage.getItem('eqviz-theme') === 'light');
+  btn.addEventListener('click', () =>
+    _apply(!document.documentElement.classList.contains(CLS))
+  );
+}
+
+function _initCSV() {
+  const btn = document.getElementById('btn-csv');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const rows = [
+      ['ID','MAGNITUDE','DEPTH_KM','PLACE','TIME','LATITUDE','LONGITUDE'],
+      ..._recentData.map(eq => [
+        eq.id || '',
+        eq.magnitude ?? '',
+        eq.depth ?? '',
+        `"${String(eq.place || '').replace(/"/g, '""')}"`,
+        `"${String(eq.time || '').replace(/"/g, '""')}"`,
+        eq.latitude ?? '',
+        eq.longitude ?? '',
+      ]),
+    ];
+    const csv  = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `eqviz_${_year}_${String(_monthNum).padStart(2, '0')}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   });
 }
 

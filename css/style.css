@@ -1061,3 +1061,46 @@ path.eq-enter {
   from { left: -90px; }
   to   { left: 110%; }
 }
+
+/* ── USGS detail link ────────────────────────────────────────────────────── */
+.detail-usgs-btn {
+  display: block; margin-top: 12px;
+  padding: 6px 10px; border: 1px solid var(--cyan-dim);
+  border-radius: 3px; text-align: center;
+  color: var(--cyan); font-size: 9px; letter-spacing: 0.14em;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.detail-usgs-btn:hover { background: rgba(0,229,255,0.08); }
+
+/* ── Light Theme ─────────────────────────────────────────────────────────── */
+.light-theme {
+  --bg-0:        #edf0f4;
+  --bg-1:        #e4e8ee;
+  --bg-2:        #d8dee8;
+  --bg-3:        #cdd5e0;
+  --bg-elev:     #c2ccd9;
+  --line:        #b0bdc9;
+  --line-bright: #9aaab8;
+  --ink:         #1a2535;
+  --ink-mid:     #3d5068;
+  --ink-dim:     #6a8098;
+  --ink-faint:   #a0b4c8;
+  --cyan:        #0077bb;
+  --cyan-dim:    #005588;
+}
+
+.light-theme body::after,
+.light-theme body::before { display: none; }
+
+/* analytics drawer + chart cards stay dark */
+.light-theme #chart-drawer,
+.light-theme .cd-card,
+.light-theme .settings-overlay .settings-modal,
+.light-theme .settings-overlay .ec-modal {
+  --bg-0: #06080b; --bg-1: #0a0e14; --bg-2: #0f141c;
+  --bg-3: #141b25; --bg-elev: #1a232f;
+  --line: #1c2734; --line-bright: #2b3a4f;
+  --ink: #d3dde9; --ink-mid: #8a99ac; --ink-dim: #4a5868;
+  --cyan: #00e5ff; --cyan-dim: #0892a5;
+}
