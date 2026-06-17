@@ -28,7 +28,7 @@ import {
   setShakeEnabled,
 } from './map.js';
 import { loadMonth, loadLive } from './data.js';
-import { renderMagnitudeChart } from './chart.js';
+import { initCharts, renderYearlyChart, renderMagnitudeChart, renderScatterChart } from './chart.js';
 import { playEarthquakeSound, setVolume, setMinMag, setTheme } from './audio.js';
 import { initGlobe, renderGlobeHeatmap, clearGlobeHeatmap, setGlobeAutoRotate, renderGlobeBars, clearGlobeBars } from './globe.js';
 import { initSeismograph, addSeismographEvent, setSeismographEnabled } from './seismograph.js';
@@ -82,7 +82,11 @@ function initUI({ riskData, recentData, stats }) {
   _initPlatesButton();
   _initAllRingsButton();
   _initSettings();
+  _initChartDrawer();
   initSeismograph();
+  initCharts();
+  renderYearlyChart(stats);
+  renderScatterChart(recentData);
 
   _setSlot(0);
 }
@@ -401,6 +405,7 @@ async function _refreshLive() {
     }
     renderRecentList(data);
     renderMagnitudeChart(data);
+    renderScatterChart(data);
     _setText('total-count', `총 ${data.length}건 (24H)`);
   } catch (err) {
     console.error('[live] 갱신 실패:', err);
@@ -612,6 +617,7 @@ function _setSlot(slot, incremental = false) {
   if (!incremental) {
     renderRecentList(windowData);
     renderMagnitudeChart(windowData);
+    renderScatterChart(windowData);
   } else {
     _scheduleListUpdate();
   }
@@ -623,6 +629,7 @@ function _scheduleListUpdate() {
     _listTimer = null;
     renderRecentList(_recentData);
     renderMagnitudeChart(_recentData);
+    renderScatterChart(_recentData);
   }, 200);
 }
 
@@ -724,6 +731,16 @@ function _initPlatesButton() {
 function _applyMaxMarkers(data) {
   const sorted = [...data].sort((a, b) => (b.magnitude || 0) - (a.magnitude || 0));
   return _settings.maxMarkers ? sorted.slice(0, _settings.maxMarkers) : sorted;
+}
+
+function _initChartDrawer() {
+  const btn  = document.getElementById('btn-chart-toggle');
+  const body = document.getElementById('cd-body');
+  if (!btn || !body) return;
+  btn.addEventListener('click', () => {
+    const open = body.classList.toggle('open');
+    btn.classList.toggle('open', open);
+  });
 }
 
 function _initSettings() {
