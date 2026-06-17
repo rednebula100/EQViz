@@ -911,6 +911,11 @@ path.eq-enter {
 }
 #splash-screen.splash-out { opacity: 0; pointer-events: none; }
 
+@keyframes splash-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 .splash-wrap {
   position: relative; width: 360px; height: 360px;
   display: flex; align-items: center; justify-content: center;
@@ -919,6 +924,7 @@ path.eq-enter {
 .splash-radar {
   position: absolute; inset: 0;
   border-radius: 50%; overflow: hidden;
+  animation: splash-fadein 0.9s ease both;
 }
 
 /* concentric rings */
@@ -1000,17 +1006,58 @@ path.eq-enter {
 .splash-dot-m { width: 6px; height: 6px; background: rgba(255,193,7,0.80);  box-shadow: 0 0 7px rgba(255,193,7,0.6); }
 .splash-dot-r { width: 9px; height: 9px; background: rgba(244,67,54,0.90);  box-shadow: 0 0 9px rgba(244,67,54,0.7); }
 
-/* logo: transparent PNG 기준 — 배경 투명, 밝은 색상으로 받으면 바로 동작 */
+/* logo */
 .splash-logo {
   position: relative; z-index: 1;
   width: 300px; height: 300px;
   object-fit: contain;
+  animation: splash-fadein 1.0s ease 0.4s both;
 }
 
-/* status text */
+/* footer: status text + loading bar */
+.splash-footer {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  margin-top: 28px;
+  animation: splash-fadein 0.7s ease 0.65s both;
+}
+
 .splash-status {
-  margin-top: 24px;
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em;
   color: var(--cyan); text-transform: uppercase; opacity: 0.65;
   transition: opacity 0.2s ease;
+}
+
+/* loading bar */
+.splash-bar-track {
+  width: 280px; height: 3px;
+  background: rgba(0,229,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 0 6px rgba(0,229,255,0.08);
+}
+
+.splash-bar-fill {
+  height: 100%; width: 0%;
+  border-radius: 2px;
+  background: rgba(0,140,200,0.7);
+  transition: width 0.1s linear;
+  position: relative; overflow: hidden;
+}
+
+.splash-bar-fill::after {
+  content: '';
+  position: absolute; top: 0; bottom: 0; width: 90px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(0,229,255,0.9),
+    rgba(200,245,255,1),
+    rgba(0,229,255,0.6),
+    transparent
+  );
+  animation: splash-bar-scan 1.6s linear infinite;
+}
+
+@keyframes splash-bar-scan {
+  from { left: -90px; }
+  to   { left: 110%; }
 }

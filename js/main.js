@@ -10,10 +10,11 @@ import { initAudio } from './audio.js';
 
 // ── Splash ───────────────────────────────────────────────────────────────────
 
-const SPLASH_MIN_MS = 3500;      // minimum display time (3.2s sweep + buffer)
+const SPLASH_MIN_MS = 4500;      // minimum display time
 const SWEEP_PERIOD  = 3200;      // must match CSS animation-duration on splash-rotate
 const _splashStart  = Date.now();
 let   _appReady     = false;
+let   _barInterval  = null;
 
 // Pre-placed radar dots: [angle_deg, radius_pct(0-100), size_class]
 const _DOT_DATA = [
@@ -56,6 +57,25 @@ function _cycleSplashText() {
   }, 700);
 }
 
+function _startLoadingBar() {
+  const bar = document.getElementById('splash-bar');
+  if (!bar) return;
+  const start = Date.now();
+  const fillDuration = SPLASH_MIN_MS * 0.88;
+  _barInterval = setInterval(() => {
+    const raw = Math.min((Date.now() - start) / fillDuration, 1);
+    const eased = 1 - Math.pow(1 - raw, 3);   // ease-out cubic
+    bar.style.width = (eased * 85) + '%';
+    if (raw >= 1) { clearInterval(_barInterval); _barInterval = null; }
+  }, 50);
+}
+
+function _fillBarComplete() {
+  if (_barInterval) { clearInterval(_barInterval); _barInterval = null; }
+  const bar = document.getElementById('splash-bar');
+  if (bar) { bar.style.transition = 'width 0.4s ease-in'; bar.style.width = '100%'; }
+}
+
 function _dismissSplash() {
   const el = document.getElementById('splash-screen');
   if (!el) return;
@@ -66,11 +86,15 @@ function _dismissSplash() {
 function _maybeHideSplash() {
   if (!_appReady) return;
   const wait = Math.max(0, SPLASH_MIN_MS - (Date.now() - _splashStart));
-  setTimeout(_dismissSplash, wait);
+  setTimeout(() => {
+    _fillBarComplete();
+    setTimeout(_dismissSplash, 450);
+  }, wait);
 }
 
 _spawnDots();
 _cycleSplashText();
+_startLoadingBar();
 
 // ── App init ─────────────────────────────────────────────────────────────────
 
