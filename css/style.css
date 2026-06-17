@@ -940,10 +940,16 @@ path.eq-enter {
     linear-gradient(135deg, transparent 49.7%, rgba(0,229,255,0.05) 50%, transparent 50.3%);
 }
 
-/* rotating conic trail */
+/* single rotating wrapper — keeps sweep gradient and line in sync */
+.splash-sweep-wrap {
+  position: absolute; inset: 0;
+  animation: splash-rotate 2.5s linear infinite;
+}
+
+/* rotating conic trail — from 90deg aligns leading edge with sweep line (3 o'clock) */
 .splash-sweep {
   position: absolute; inset: 0; border-radius: 50%;
-  background: conic-gradient(
+  background: conic-gradient(from 90deg,
     transparent 0deg 310deg,
     rgba(0,229,255,0.04) 310deg,
     rgba(0,229,255,0.13) 330deg,
@@ -951,7 +957,6 @@ path.eq-enter {
     rgba(0,229,255,0.32) 356deg,
     rgba(0,229,255,0.36) 360deg
   );
-  animation: splash-rotate 2.5s linear infinite;
 }
 
 /* leading sweep line */
@@ -960,7 +965,6 @@ path.eq-enter {
   width: 50%; height: 1px;
   background: linear-gradient(to right, rgba(0,229,255,0.95), transparent);
   transform-origin: 0% 50%;
-  animation: splash-rotate 2.5s linear infinite;
   box-shadow: 0 0 4px rgba(0,229,255,0.6);
 }
 
@@ -996,13 +1000,16 @@ path.eq-enter {
 .splash-dot-m { width: 6px; height: 6px; background: rgba(255,193,7,0.80);  box-shadow: 0 0 7px rgba(255,193,7,0.6); }
 .splash-dot-r { width: 9px; height: 9px; background: rgba(244,67,54,0.90);  box-shadow: 0 0 9px rgba(244,67,54,0.7); }
 
-/* logo overlay (mix-blend-mode:screen removes dark bg) */
+/* logo: luminance mask → black bg transparent, bright content shows as cyan */
 .splash-logo {
   position: relative; z-index: 1;
   width: 300px; height: 300px;
-  object-fit: contain;
-  mix-blend-mode: screen;
-  filter: brightness(1.05) saturate(1.1);
+  background: var(--cyan);
+  -webkit-mask: url('../assets/logo.png') center/contain no-repeat;
+  mask: url('../assets/logo.png') center/contain no-repeat;
+  -webkit-mask-mode: luminance;
+  mask-mode: luminance;
+  filter: drop-shadow(0 0 10px rgba(0,229,255,0.7));
 }
 
 /* status text */
