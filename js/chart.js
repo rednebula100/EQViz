@@ -30,10 +30,17 @@ const _SCALE = {
   grid:  { color: 'rgba(255,255,255,0.04)' },
 };
 
+function _getCtx(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  Chart.getChart(el)?.destroy();
+  return el.getContext('2d');
+}
+
 function initCharts() {
-  const ctxY = document.getElementById('canvas-yearly')?.getContext('2d');
-  const ctxM = document.getElementById('canvas-magnitude')?.getContext('2d');
-  const ctxS = document.getElementById('canvas-scatter')?.getContext('2d');
+  const ctxY = _getCtx('canvas-yearly');
+  const ctxM = _getCtx('canvas-magnitude');
+  const ctxS = _getCtx('canvas-scatter');
 
   if (ctxY) {
     yearlyChart = new Chart(ctxY, {
