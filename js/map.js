@@ -50,6 +50,7 @@ function initMap(containerId) {
   map = L.map(containerId, {
     center: [20, 160],
     zoom: 2,
+    minZoom: 2,
     preferCanvas: false,
     zoomControl: true,
     maxBounds: [[-85.051129, -540], [85.051129, 540]],
