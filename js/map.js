@@ -433,17 +433,23 @@ function _redrawTrail() {
 
 // ── Screen Shake ──────────────────────────────────────────────────────────────
 
+const _ALL_SHAKE = ['eq-shaking-xs','eq-shaking-sm','eq-shaking-md',
+                    'eq-shaking-lg','eq-shaking-xl','eq-shaking-xxl'];
+
 function triggerShake(mag) {
   if (!_shakeEnabled) return;
-  const cls = mag >= 7.5 ? 'eq-shaking-lg'
+  const cls = mag >= 8.0 ? 'eq-shaking-xxl'
+            : mag >= 7.5 ? 'eq-shaking-xl'
+            : mag >= 7.0 ? 'eq-shaking-lg'
             : mag >= 6.5 ? 'eq-shaking-md'
-            : mag >= 5.5 ? 'eq-shaking-sm'
+            : mag >= 6.0 ? 'eq-shaking-sm'
+            : mag >= 5.5 ? 'eq-shaking-xs'
             : null;
   if (!cls) return;
   const el = document.querySelector('.map-wrap');
   if (!el) return;
-  el.classList.remove('eq-shaking-sm', 'eq-shaking-md', 'eq-shaking-lg');
-  void el.offsetWidth; // reflow로 animation 재시작 강제
+  el.classList.remove(..._ALL_SHAKE);
+  void el.offsetWidth;
   el.classList.add(cls);
   el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
 }

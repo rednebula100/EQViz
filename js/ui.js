@@ -82,6 +82,7 @@ function initUI({ riskData, recentData, stats }) {
   _initPlatesButton();
   _initAllRingsButton();
   _initSettings();
+  _initExtraCharts();
   _initChartDrawer();
   initSeismograph();
   setSeismographEnabled(_settings.seismograph);
@@ -753,6 +754,22 @@ function _initPlatesButton() {
 function _applyMaxMarkers(data) {
   const sorted = [...data].sort((a, b) => (b.magnitude || 0) - (a.magnitude || 0));
   return _settings.maxMarkers ? sorted.slice(0, _settings.maxMarkers) : sorted;
+}
+
+function _initExtraCharts() {
+  const btn     = document.getElementById('btn-extra-charts');
+  const overlay = document.getElementById('extra-charts-overlay');
+  if (!btn || !overlay) return;
+  btn.addEventListener('click', () => {
+    overlay.classList.remove('hidden');
+    setTimeout(resizeCharts, 50);
+  });
+  document.getElementById('extra-charts-close')?.addEventListener('click', () => {
+    overlay.classList.add('hidden');
+  });
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.add('hidden');
+  });
 }
 
 function _initChartDrawer() {

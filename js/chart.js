@@ -114,25 +114,25 @@ function _getCtx(id) {
 }
 
 function initCharts() {
-  /* 우측 패널: Yearly (green) */
+  /* 우측 패널: Yearly (blue, original) */
   const ctxY = _getCtx('canvas-yearly');
   if (ctxY) {
     yearlyChart = new Chart(ctxY, {
       type: 'bar',
       data: { labels: [], datasets: [{ data: [],
-        backgroundColor: 'rgba(76,175,80,0.55)', borderColor: 'rgba(102,187,106,0.85)',
+        backgroundColor: 'rgba(100,181,246,0.72)', borderColor: 'rgba(100,181,246,0.90)',
         borderWidth: 1, borderRadius: 2 }] },
       options: { ..._BASE, scales: { x: _SCALE, y: { ..._SCALE, beginAtZero: true } } },
     });
   }
 
-  /* 우측 패널: Magnitude Distribution (red/salmon) */
+  /* 우측 패널: Magnitude Distribution (red, original) */
   const ctxM = _getCtx('canvas-magnitude');
   if (ctxM) {
     magChart = new Chart(ctxM, {
       type: 'bar',
       data: { labels: [], datasets: [{ data: [],
-        backgroundColor: 'rgba(229,115,115,0.65)', borderColor: 'rgba(239,83,80,0.85)',
+        backgroundColor: 'rgba(233,69,96,0.72)', borderColor: 'rgba(233,69,96,0.90)',
         borderWidth: 1, borderRadius: 2 }] },
       options: { ..._BASE, scales: { x: _SCALE, y: { ..._SCALE, beginAtZero: true } } },
     });
@@ -433,6 +433,9 @@ function setLegacyMode(on) {
 }
 
 function resizeCharts() {
+  yearlyChart?.resize();
+  magChart?.resize();
+  riskZoneChart?.resize();
   scatterChart?.resize();
   depthChart?.resize();
   hourChart?.resize();

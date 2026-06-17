@@ -861,6 +861,42 @@ path.eq-enter {
   82%     { transform: translate(-2px, 2px); }
   92%     { transform: translate(1px,-1px); }
 }
-.eq-shaking-sm { animation: eq-shake-sm 0.28s ease-in-out; }
-.eq-shaking-md { animation: eq-shake-md 0.45s ease-in-out; }
-.eq-shaking-lg { animation: eq-shake-lg 0.75s ease-in-out; }
+.eq-shaking-xs  { animation: eq-shake-sm  0.18s ease-in-out; }
+.eq-shaking-sm  { animation: eq-shake-sm  0.28s ease-in-out; }
+.eq-shaking-md  { animation: eq-shake-md  0.45s ease-in-out; }
+.eq-shaking-lg  { animation: eq-shake-lg  0.75s ease-in-out; }
+.eq-shaking-xl  { animation: eq-shake-xl  1.0s  ease-in-out; }
+.eq-shaking-xxl { animation: eq-shake-xxl 1.6s  ease-in-out; }
+
+@keyframes eq-shake-xl {
+  0%,100% { transform: translate(0,0) rotate(0deg); }
+  8%      { transform: translate(-14px,  7px) rotate(-0.5deg); }
+  18%     { transform: translate( 14px, -9px) rotate( 0.6deg); }
+  28%     { transform: translate(-11px, 10px) rotate(-0.4deg); }
+  38%     { transform: translate( 10px, -8px) rotate( 0.4deg); }
+  48%     { transform: translate( -8px,  7px) rotate(-0.3deg); }
+  58%     { transform: translate(  7px, -5px) rotate( 0.2deg); }
+  68%     { transform: translate( -5px,  4px) rotate(-0.1deg); }
+  78%     { transform: translate(  4px, -3px); }
+  90%     { transform: translate( -2px,  2px); }
+}
+@keyframes eq-shake-xxl {
+  0%,100% { transform: translate(0,0) rotate(0deg); }
+  5%      { transform: translate(-22px, 11px) rotate(-0.8deg); }
+  12%     { transform: translate( 22px,-14px) rotate( 0.9deg); }
+  19%     { transform: translate(-18px, 16px) rotate(-0.7deg); }
+  26%     { transform: translate( 16px,-13px) rotate( 0.6deg); }
+  33%     { transform: translate(-14px, 11px) rotate(-0.5deg); }
+  41%     { transform: translate( 12px, -9px) rotate( 0.4deg); }
+  49%     { transform: translate(-10px,  8px) rotate(-0.3deg); }
+  57%     { transform: translate(  8px, -6px) rotate( 0.2deg); }
+  65%     { transform: translate( -6px,  5px) rotate(-0.2deg); }
+  73%     { transform: translate(  5px, -4px) rotate( 0.1deg); }
+  81%     { transform: translate( -4px,  3px); }
+  89%     { transform: translate(  3px, -2px); }
+  95%     { transform: translate( -2px,  1px); }
+}
+
+/* ── Extra Charts Modal ──────────────────────────────────────────────────── */
+.ec-modal { width: 460px; }
+.ec-chart-wrap { height: 240px; position: relative; }
