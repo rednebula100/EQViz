@@ -28,7 +28,7 @@ import {
   setShakeEnabled,
 } from './map.js';
 import { loadMonth, loadLive } from './data.js';
-import { initCharts, renderYearlyChart, renderMagnitudeChart, renderScatterChart, resizeCharts } from './chart.js';
+import { initCharts, renderYearlyChart, renderMagnitudeChart, renderScatterChart, renderHourChart, renderDayChart, resizeCharts } from './chart.js';
 import { playEarthquakeSound, setVolume, setMinMag, setTheme } from './audio.js';
 import { initGlobe, renderGlobeHeatmap, clearGlobeHeatmap, setGlobeAutoRotate, renderGlobeBars, clearGlobeBars } from './globe.js';
 import { initSeismograph, addSeismographEvent, setSeismographEnabled } from './seismograph.js';
@@ -87,6 +87,8 @@ function initUI({ riskData, recentData, stats }) {
   initCharts();
   renderYearlyChart(stats);
   renderScatterChart(recentData);
+  renderHourChart(recentData);
+  renderDayChart(recentData);
 
   _setSlot(0);
 }
@@ -406,6 +408,8 @@ async function _refreshLive() {
     renderRecentList(data);
     renderMagnitudeChart(data);
     renderScatterChart(data);
+    renderHourChart(data);
+    renderDayChart(data);
     _setText('total-count', `총 ${data.length}건 (24H)`);
   } catch (err) {
     console.error('[live] 갱신 실패:', err);
@@ -618,6 +622,8 @@ function _setSlot(slot, incremental = false) {
     renderRecentList(windowData);
     renderMagnitudeChart(windowData);
     renderScatterChart(windowData);
+    renderHourChart(windowData);
+    renderDayChart(windowData);
   } else {
     _scheduleListUpdate();
   }
@@ -630,6 +636,8 @@ function _scheduleListUpdate() {
     renderRecentList(_recentData);
     renderMagnitudeChart(_recentData);
     renderScatterChart(_recentData);
+    renderHourChart(_recentData);
+    renderDayChart(_recentData);
   }, 200);
 }
 
