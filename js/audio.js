@@ -22,7 +22,7 @@ function _ensureCtx() {
 function initAudio() {
   const btn = document.getElementById('btn-mute');
   if (!btn) return;
-  btn.textContent = '🔊';
+  btn.textContent = '♪';
   btn.classList.add('unmuted');
 
   // 첫 사용자 제스처(클릭/키)에서 AudioContext를 미리 생성·재개
@@ -39,7 +39,7 @@ function initAudio() {
   btn.addEventListener('click', () => {
     _ensureCtx();
     _muted = !_muted;
-    btn.textContent = _muted ? '🔇' : '🔊';
+    btn.textContent = _muted ? '⊘' : '♪';
     btn.classList.toggle('unmuted', !_muted);
     if (!_muted && _ctx.state === 'suspended') _ctx.resume();
   });
