@@ -511,12 +511,14 @@ body::before {
   height: 0; overflow: hidden;
   transition: height 0.32s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.cd-body.open { height: 230px; }
+.cd-body.open { height: 460px; }
 
 .cd-grid {
   display: grid; grid-template-columns: 1fr 1fr 1fr;
-  height: 230px; gap: 1px; background: var(--line);
+  grid-template-rows: 1fr 1fr;
+  height: 460px; gap: 1px; background: var(--line);
 }
+.cd-wide { grid-column: span 2; }
 
 .chart-card { padding: 8px 12px 14px; }
 .chart-card canvas { width: 100% !important; max-height: 140px; }
