@@ -301,6 +301,13 @@ function renderYearlyChart(stats) {
   yearlyChart.update();
 }
 
+function renderFreqChart(labels, data) {
+  if (!yearlyChart) return;
+  yearlyChart.data.labels           = labels;
+  yearlyChart.data.datasets[0].data = data;
+  yearlyChart.update();
+}
+
 function renderMagnitudeChart(data) {
   if (!magChart) return;
   const BINS   = ['4.0–4.9','5.0–5.4','5.5–5.9','6.0–6.4','6.5–6.9','7.0+'];
@@ -445,7 +452,7 @@ function resizeCharts() {
 }
 
 export {
-  initCharts, renderYearlyChart, renderMagnitudeChart, renderRiskZoneChart,
+  initCharts, renderYearlyChart, renderFreqChart, renderMagnitudeChart, renderRiskZoneChart,
   renderScatterChart, renderDepthChart, renderHourChart, renderDayChart,
   renderGRChart, renderMTChart, setLegacyMode, resizeCharts,
 };

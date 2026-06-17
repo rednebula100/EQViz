@@ -900,3 +900,115 @@ path.eq-enter {
 /* ── Extra Charts Modal ──────────────────────────────────────────────────── */
 .ec-modal { width: 460px; }
 .ec-chart-wrap { height: 240px; position: relative; }
+
+/* ── Splash Screen ───────────────────────────────────────────────────────── */
+#splash-screen {
+  position: fixed; inset: 0; z-index: 99999;
+  background: var(--bg-0);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0;
+  transition: opacity 0.7s ease;
+}
+#splash-screen.splash-out { opacity: 0; pointer-events: none; }
+
+.splash-wrap {
+  position: relative; width: 360px; height: 360px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.splash-radar {
+  position: absolute; inset: 0;
+  border-radius: 50%; overflow: hidden;
+}
+
+/* concentric rings */
+.splash-grid {
+  position: absolute; inset: 0; border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 24.5%, rgba(0,229,255,0.09) 25%,   transparent 25.5%),
+    radial-gradient(circle, transparent 49.5%, rgba(0,229,255,0.07) 50%,   transparent 50.5%),
+    radial-gradient(circle, transparent 74.5%, rgba(0,229,255,0.09) 75%,   transparent 75.5%),
+    radial-gradient(circle, transparent 99%,   rgba(0,229,255,0.18) 100%);
+}
+/* crosshairs + diagonals */
+.splash-grid::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    linear-gradient(0deg,   transparent 49.6%, rgba(0,229,255,0.12) 50%, transparent 50.4%),
+    linear-gradient(90deg,  transparent 49.6%, rgba(0,229,255,0.12) 50%, transparent 50.4%),
+    linear-gradient(45deg,  transparent 49.7%, rgba(0,229,255,0.05) 50%, transparent 50.3%),
+    linear-gradient(135deg, transparent 49.7%, rgba(0,229,255,0.05) 50%, transparent 50.3%);
+}
+
+/* rotating conic trail */
+.splash-sweep {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(
+    transparent 0deg 310deg,
+    rgba(0,229,255,0.04) 310deg,
+    rgba(0,229,255,0.13) 330deg,
+    rgba(0,229,255,0.24) 345deg,
+    rgba(0,229,255,0.32) 356deg,
+    rgba(0,229,255,0.36) 360deg
+  );
+  animation: splash-rotate 2.5s linear infinite;
+}
+
+/* leading sweep line */
+.splash-sweep-line {
+  position: absolute; top: 50%; left: 50%;
+  width: 50%; height: 1px;
+  background: linear-gradient(to right, rgba(0,229,255,0.95), transparent);
+  transform-origin: 0% 50%;
+  animation: splash-rotate 2.5s linear infinite;
+  box-shadow: 0 0 4px rgba(0,229,255,0.6);
+}
+
+@keyframes splash-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* center dot */
+.splash-center {
+  position: absolute; top: 50%; left: 50%;
+  width: 6px; height: 6px; border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--cyan); box-shadow: 0 0 10px var(--cyan), 0 0 20px rgba(0,229,255,0.4);
+  z-index: 2;
+}
+
+/* radar dots container */
+.splash-dots { position: absolute; inset: 0; }
+
+.splash-dot {
+  position: absolute; border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  animation: splash-dot-pop 0.35s ease forwards;
+}
+@keyframes splash-dot-pop {
+  0%   { transform: translate(-50%,-50%) scale(0);   opacity: 0; }
+  55%  { transform: translate(-50%,-50%) scale(1.7); opacity: 1; }
+  100% { transform: translate(-50%,-50%) scale(1);   opacity: 0.85; }
+}
+.splash-dot-s { width: 4px; height: 4px; background: rgba(0,229,255,0.70); box-shadow: 0 0 5px rgba(0,229,255,0.5); }
+.splash-dot-m { width: 6px; height: 6px; background: rgba(255,193,7,0.80);  box-shadow: 0 0 7px rgba(255,193,7,0.6); }
+.splash-dot-r { width: 9px; height: 9px; background: rgba(244,67,54,0.90);  box-shadow: 0 0 9px rgba(244,67,54,0.7); }
+
+/* logo overlay (mix-blend-mode:screen removes dark bg) */
+.splash-logo {
+  position: relative; z-index: 1;
+  width: 300px; height: 300px;
+  object-fit: contain;
+  mix-blend-mode: screen;
+  filter: brightness(1.05) saturate(1.1);
+}
+
+/* status text */
+.splash-status {
+  margin-top: 24px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em;
+  color: var(--cyan); text-transform: uppercase; opacity: 0.65;
+  transition: opacity 0.2s ease;
+}

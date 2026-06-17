@@ -28,7 +28,7 @@ import {
   setShakeEnabled,
 } from './map.js';
 import { loadMonth, loadLive } from './data.js';
-import { initCharts, renderYearlyChart, renderMagnitudeChart, renderRiskZoneChart, renderScatterChart, renderDepthChart, renderHourChart, renderDayChart, renderGRChart, renderMTChart, setLegacyMode, resizeCharts } from './chart.js';
+import { initCharts, renderYearlyChart, renderFreqChart, renderMagnitudeChart, renderRiskZoneChart, renderScatterChart, renderDepthChart, renderHourChart, renderDayChart, renderGRChart, renderMTChart, setLegacyMode, resizeCharts } from './chart.js';
 import { playEarthquakeSound, setVolume, setMinMag, setTheme } from './audio.js';
 import { initGlobe, renderGlobeHeatmap, clearGlobeHeatmap, setGlobeAutoRotate, renderGlobeBars, clearGlobeBars } from './globe.js';
 import { initSeismograph, addSeismographEvent, setSeismographEnabled } from './seismograph.js';
@@ -61,6 +61,8 @@ let _globeInited   = false;
 let _autoRotate    = false;
 let _showAllRings  = false;
 let _prevRingsKey  = '';
+let _freqMode        = 'year';
+const _monthFreqCache = {};
 const _settings = { liveInterval: 60, maxMarkers: 300, volume: 0.8, minSoundMag: 4, soundTheme: 'SEISMIC', autoPlay: false, shake: true, seismograph: false, trail: false, legacyCharts: false };
 
 function initUI({ riskData, recentData, stats }) {
@@ -82,6 +84,7 @@ function initUI({ riskData, recentData, stats }) {
   _initPlatesButton();
   _initAllRingsButton();
   _initSettings();
+  _initFreqToggle();
   _initExtraCharts();
   _initChartDrawer();
   initSeismograph();
@@ -682,6 +685,12 @@ async function _setYear(year) {
   if (_playing) _stopPlay();
   _year = year;
   _updateYearDisplay(year);
+  if (_freqMode === 'month') {
+    const MO = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    _setText('freq-title', `FREQUENCY · ${year}`);
+    renderFreqChart(MO, new Array(12).fill(null));
+    _loadMonthlyFreq(year).then(counts => { if (_freqMode === 'month') renderFreqChart(MO, counts); });
+  }
   await _setMonth(1);
 }
 
@@ -754,6 +763,44 @@ function _initPlatesButton() {
 function _applyMaxMarkers(data) {
   const sorted = [...data].sort((a, b) => (b.magnitude || 0) - (a.magnitude || 0));
   return _settings.maxMarkers ? sorted.slice(0, _settings.maxMarkers) : sorted;
+}
+
+const _MO_LABELS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+async function _loadMonthlyFreq(year) {
+  if (_monthFreqCache[year]) return _monthFreqCache[year];
+  const results = await Promise.all(
+    Array.from({ length: 12 }, (_, i) => loadMonth(year, i + 1).catch(() => []))
+  );
+  const counts = results.map(evts => evts.length);
+  _monthFreqCache[year] = counts;
+  return counts;
+}
+
+function _initFreqToggle() {
+  document.getElementById('freq-btn-year')?.addEventListener('click', () => {
+    if (_freqMode === 'year') return;
+    _freqMode = 'year';
+    document.getElementById('freq-btn-year')?.classList.add('active');
+    document.getElementById('freq-btn-month')?.classList.remove('active');
+    _setText('freq-title', 'FREQUENCY · YEARLY');
+    renderYearlyChart(_stats);
+  });
+
+  document.getElementById('freq-btn-month')?.addEventListener('click', async () => {
+    if (_freqMode === 'month') return;
+    _freqMode = 'month';
+    document.getElementById('freq-btn-year')?.classList.remove('active');
+    document.getElementById('freq-btn-month')?.classList.add('active');
+    _setText('freq-title', `FREQUENCY · ${_year}`);
+    renderFreqChart(_MO_LABELS, new Array(12).fill(null));
+    try {
+      const counts = await _loadMonthlyFreq(_year);
+      if (_freqMode === 'month') renderFreqChart(_MO_LABELS, counts);
+    } catch (err) {
+      console.error('[freq] monthly load failed:', err);
+    }
+  });
 }
 
 function _initExtraCharts() {

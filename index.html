@@ -21,6 +21,22 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+
+<!-- ══ SPLASH SCREEN ═════════════════════════════════════════════════════════ -->
+<div id="splash-screen">
+  <div class="splash-wrap">
+    <div class="splash-radar">
+      <div class="splash-grid"></div>
+      <div class="splash-sweep"></div>
+      <div class="splash-sweep-line"></div>
+      <div class="splash-dots" id="splash-dots"></div>
+      <div class="splash-center"></div>
+    </div>
+    <img src="assets/logo.png" alt="EQVIZ" class="splash-logo" id="splash-logo" />
+  </div>
+  <div class="splash-status" id="splash-status">SCANNING · SEISMIC DATABASE</div>
+</div>
+
 <div id="root">
 
   <!-- ══ TOPBAR ══════════════════════════════════════════════════════════════ -->
@@ -237,8 +253,11 @@
       <!-- Yearly frequency chart -->
       <div class="sec" id="chart-yearly">
         <div class="sec-head">
-          <span>FREQUENCY · YEARLY</span>
-          <span class="num-mono" style="color:var(--ink-dim);font-size:9px;">2015–2024</span>
+          <span id="freq-title">FREQUENCY · YEARLY</span>
+          <div class="mode-toggle" style="flex-shrink:0;">
+            <button class="mode-btn active" id="freq-btn-year">YR</button>
+            <button class="mode-btn" id="freq-btn-month">MO</button>
+          </div>
         </div>
         <div class="chart-card">
           <canvas id="canvas-yearly"></canvas>
